@@ -1,0 +1,14 @@
+date	fed-o	fed	type	level	status	comment
+1646827310	0	0	128	10	0	
+1646827330	0	0	3	9	0	Federation Name : GLOBAL_SYNCHRONIZATION, Handle : 1 created - OK
+1646827330	0	0	5	9	0	Federate "SYNCH_OMNET" joins Federation "GLOBAL_SYNCHRONIZATION"(1) with handle 1. Socket 6 - OK
+1646827330	1	1	12	8	0	Label "Init" registered. Tag is "Waiting all federations." - OK
+1646827330	1	1	39	7	0	Subscribe Interaction Class = 3 - OK
+1646827330	1	1	35	7	0	Publish Interaction Class = 4 - OK
+1646827330	1	1	9	8	0	ON at time 0.000000 - OK
+1646827330	1	1	8	8	0	ON at time 1.000000 - OK
+1646827330	0	0	3	9	0	Federation Name : COSSIM_PROC_NET_NODE0, Handle : 2 created - OK
+1646827330	0	0	5	9	0	Federate "OMNET" joins Federation "COSSIM_PROC_NET_NODE0"(2) with handle 1. Socket 7 - OK
+1646827330	2	1	12	8	0	Label "Init" registered. Tag is "Waiting all federations." - OK
+1646827330	2	1	39	7	0	Subscribe Interaction Class = 3 - OK
+1646827330	2	1	35	7	0	Publish Interaction Class = 4 - OK

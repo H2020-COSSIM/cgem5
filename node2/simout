@@ -1,0 +1,164 @@
+Global frequency set at 1000000000000 ticks per second
+build/ARM/mem/mem_interface.cc:793: warn: DRAM device capacity (8192 Mbytes) does not match the address range assigned (2048 Mbytes)
+build/ARM/sim/kernel_workload.cc:46: info: kernel located at: /home/red-sea/COSSIM/kernels/binaries/vmlinux.arm64
+
+1. COSSIM_PROC_NET_NODE2
+HLA_GEM5 Note : FederationExecutionAlreadyExists Reason is : COSSIM_PROC_NET_NODE2. OK I can join it
+announceSynchronizationPoint
+
+2. GEM5_NODE2
+HLA_GEM5 Note : FederationExecutionAlreadyExists Reason is : GLOBAL_SYNCHRONIZATION. OK I can join it
+announceSynchronizationPoint
+system.vncserver: Listening for connections on port 5901
+system.terminal: Listening for connections on port 3002
+system.realview.uart1.device: Listening for connections on port 3459
+system.realview.uart2.device: Listening for connections on port 3460
+system.realview.uart3.device: Listening for connections on port 3462
+0: system.remote_gdb: listening for remote gdb on port 7001
+build/ARM/arch/arm/fs_workload.cc:121: info: Using bootloader at address 0x10
+build/ARM/arch/arm/fs_workload.cc:139: info: Using kernel entry physical address at 0x80080000
+build/ARM/arch/arm/linux/fs_workload.cc:97: info: Loading DTB file: /home/red-sea/COSSIM/cgem5/node2/system.dtb at address 0x88000000
+build/ARM/dev/arm/energy_ctrl.cc:252: warn: Existing EnergyCtrl, but no enabled DVFSHandler found.
+Redirecting stdout and stderr to /home/red-sea/COSSIM/cgem5/node2/simout
+gem5 Simulator System.  http://gem5.org
+gem5 is copyrighted software; use the --copyright option for details.
+
+gem5 version 21.2.1.0
+gem5 compiled Mar  9 2022 13:46:40
+gem5 started Mar  9 2022 14:05:45
+gem5 executing on redsea-virtual-machine, pid 6490
+command line: /home/red-sea/COSSIM/cgem5/build/ARM/gem5.fast --listener-mode=on -r -d /home/red-sea/COSSIM/cgem5/node2 /home/red-sea/COSSIM/cgem5/configs/example/arm/starter_fs.py --kernel=vmlinux.arm64 --num-cores=2 --disk-image=ubuntu-18.04-arm64-docker.img --SynchTime=100us --RxPacketTime=10us --TotalNodes=3 --nodeNum=2 --script=/home/red-sea/COSSIM/cgem5/configs/boot/COSSIM/script2.rcS --etherdump=/home/red-sea/COSSIM/cgem5/node2/ether_node2 --cossim
+
+warn: No dot file generated. Please install pydot to generate the dot file and pdf.
+build/ARM/sim/simulate.cc:194: info: Entering event queue @ 0.  Starting simulation...
+build/ARM/dev/arm/rv_ctrl.cc:178: warn: SCReg: Access to unknown device dcc0:site0:pos0:fn7:dev0
+build/ARM/arch/arm/insts/pseudo.cc:173: warn: 	instruction 'csdb' unimplemented
+build/ARM/dev/arm/gic_v2.cc:628: warn: GIC APRn write ignored because not implemented: 0xd0
+build/ARM/dev/arm/gic_v2.cc:628: warn: GIC APRn write ignored because not implemented: 0xd4
+build/ARM/dev/arm/gic_v2.cc:628: warn: GIC APRn write ignored because not implemented: 0xd8
+build/ARM/dev/arm/gic_v2.cc:628: warn: GIC APRn write ignored because not implemented: 0xdc
+build/ARM/dev/arm/gic_v2.cc:628: warn: GIC APRn write ignored because not implemented: 0xd0
+build/ARM/dev/arm/gic_v2.cc:628: warn: GIC APRn write ignored because not implemented: 0xd4
+build/ARM/dev/arm/gic_v2.cc:628: warn: GIC APRn write ignored because not implemented: 0xd8
+build/ARM/dev/arm/gic_v2.cc:628: warn: GIC APRn write ignored because not implemented: 0xdc
+build/ARM/dev/arm/rv_ctrl.cc:123: warn: Tried to read RealView I/O at offset 0x60 that doesn't exist
+build/ARM/dev/arm/rv_ctrl.cc:123: warn: Tried to read RealView I/O at offset 0x48 that doesn't exist
+build/ARM/dev/arm/rv_ctrl.cc:199: warn: Tried to write RVIO at offset 0xa8 (data 0) that doesn't exist
+build/ARM/dev/arm/rv_ctrl.cc:199: warn: Tried to write RVIO at offset 0xa8 (data 0) that doesn't exist
+build/ARM/dev/arm/rv_ctrl.cc:199: warn: Tried to write RVIO at offset 0xa8 (data 0) that doesn't exist
+build/ARM/dev/arm/rv_ctrl.cc:199: warn: Tried to write RVIO at offset 0xa8 (data 0) that doesn't exist
+build/ARM/dev/arm/rv_ctrl.cc:199: warn: Tried to write RVIO at offset 0xa8 (data 0) that doesn't exist
+build/ARM/dev/arm/rv_ctrl.cc:199: warn: Tried to write RVIO at offset 0xa8 (data 0) that doesn't exist
+build/ARM/dev/arm/rv_ctrl.cc:199: warn: Tried to write RVIO at offset 0xa8 (data 0) that doesn't exist
+build/ARM/dev/arm/rv_ctrl.cc:199: warn: Tried to write RVIO at offset 0xa8 (data 0) that doesn't exist
+build/ARM/dev/arm/rv_ctrl.cc:199: warn: Tried to write RVIO at offset 0xa8 (data 0) that doesn't exist
+build/ARM/dev/arm/rv_ctrl.cc:199: warn: Tried to write RVIO at offset 0xa8 (data 0) that doesn't exist
+build/ARM/dev/arm/rv_ctrl.cc:123: warn: Tried to read RealView I/O at offset 0x8 that doesn't exist
+build/ARM/dev/arm/rv_ctrl.cc:123: warn: Tried to read RealView I/O at offset 0x48 that doesn't exist
+build/ARM/dev/arm/energy_ctrl.cc:78: warn: EnergyCtrl: Disabled handler, ignoring read from reg 0
+build/ARM/dev/net/COSSIMetherlink.cc:246: panic: GEM5 simulator node 2 is stopped by OMNET++ corresponding Node before normal execution
+Memory Usage: 2916464 KBytes
+Program aborted at tick 796010000000
+--- BEGIN LIBC BACKTRACE ---
+/home/red-sea/COSSIM/cgem5/build/ARM/gem5.fast(+0xa61aec)[0x55ab65158aec]
+/home/red-sea/COSSIM/cgem5/build/ARM/gem5.fast(+0xa7932a)[0x55ab6517032a]
+/lib/x86_64-linux-gnu/libpthread.so.0(+0x12980)[0x7fcb7c16d980]
+/lib/x86_64-linux-gnu/libc.so.6(gsignal+0xc7)[0x7fcb79c0ae87]
+/lib/x86_64-linux-gnu/libc.so.6(abort+0x141)[0x7fcb79c0c7f1]
+/home/red-sea/COSSIM/cgem5/build/ARM/gem5.fast(+0x491c5f)[0x55ab64b88c5f]
+/home/red-sea/COSSIM/cgem5/build/ARM/gem5.fast(+0x19578b8)[0x55ab6604e8b8]
+/home/red-sea/COSSIM/cgem5/build/ARM/gem5.fast(+0xa6bf4d)[0x55ab65162f4d]
+/home/red-sea/COSSIM/cgem5/build/ARM/gem5.fast(+0xa94938)[0x55ab6518b938]
+/home/red-sea/COSSIM/cgem5/build/ARM/gem5.fast(+0xa95703)[0x55ab6518c703]
+/home/red-sea/COSSIM/cgem5/build/ARM/gem5.fast(+0x199c2ce)[0x55ab660932ce]
+/home/red-sea/COSSIM/cgem5/build/ARM/gem5.fast(+0x868897)[0x55ab64f5f897]
+/usr/lib/x86_64-linux-gnu/libpython3.6m.so.1.0(PyCFunction_Call+0x96)[0x7fcb7c58d736]
+/usr/lib/x86_64-linux-gnu/libpython3.6m.so.1.0(_PyEval_EvalFrameDefault+0x76e0)[0x7fcb7c4feb20]
+/usr/lib/x86_64-linux-gnu/libpython3.6m.so.1.0(+0x17ba0f)[0x7fcb7c4f5a0f]
+/usr/lib/x86_64-linux-gnu/libpython3.6m.so.1.0(+0x17c0fc)[0x7fcb7c4f60fc]
+/usr/lib/x86_64-linux-gnu/libpython3.6m.so.1.0(_PyEval_EvalFrameDefault+0x4ec3)[0x7fcb7c4fc303]
+/usr/lib/x86_64-linux-gnu/libpython3.6m.so.1.0(+0x17a803)[0x7fcb7c4f4803]
+/usr/lib/x86_64-linux-gnu/libpython3.6m.so.1.0(+0x17c2be)[0x7fcb7c4f62be]
+/usr/lib/x86_64-linux-gnu/libpython3.6m.so.1.0(_PyEval_EvalFrameDefault+0x4ec3)[0x7fcb7c4fc303]
+/usr/lib/x86_64-linux-gnu/libpython3.6m.so.1.0(+0x17a803)[0x7fcb7c4f4803]
+/usr/lib/x86_64-linux-gnu/libpython3.6m.so.1.0(+0x17c2be)[0x7fcb7c4f62be]
+/usr/lib/x86_64-linux-gnu/libpython3.6m.so.1.0(_PyEval_EvalFrameDefault+0x4ec3)[0x7fcb7c4fc303]
+/usr/lib/x86_64-linux-gnu/libpython3.6m.so.1.0(+0x17ba0f)[0x7fcb7c4f5a0f]
+/usr/lib/x86_64-linux-gnu/libpython3.6m.so.1.0(PyEval_EvalCodeEx+0x3e)[0x7fcb7c4f64ce]
+/usr/lib/x86_64-linux-gnu/libpython3.6m.so.1.0(PyEval_EvalCode+0x1b)[0x7fcb7c4f724b]
+/usr/lib/x86_64-linux-gnu/libpython3.6m.so.1.0(+0x18855d)[0x7fcb7c50255d]
+/usr/lib/x86_64-linux-gnu/libpython3.6m.so.1.0(_PyCFunction_FastCallDict+0x1bb)[0x7fcb7c58d53b]
+/usr/lib/x86_64-linux-gnu/libpython3.6m.so.1.0(+0x17c1ec)[0x7fcb7c4f61ec]
+/usr/lib/x86_64-linux-gnu/libpython3.6m.so.1.0(_PyEval_EvalFrameDefault+0x4ec3)[0x7fcb7c4fc303]
+/usr/lib/x86_64-linux-gnu/libpython3.6m.so.1.0(+0x17ba0f)[0x7fcb7c4f5a0f]
+/usr/lib/x86_64-linux-gnu/libpython3.6m.so.1.0(PyEval_EvalCodeEx+0x3e)[0x7fcb7c4f64ce]
+--- END LIBC BACKTRACE ---
+RTIA:: RTIA has thrown NetworkError exception.
+RTIA:: Reason: Connection closed by client.
+
+RTIA: Statistics (processed messages)
+List of federate initiated services 
+--------------------------------------------------
+       1 Message::OPEN_CONNEXION (MSG#1)
+       1 Message::RESIGN_FEDERATION_EXECUTION (MSG#6)
+       1 Message::SYNCHRONIZATION_POINT_ACHIEVED (MSG#11)
+       1 Message::PUBLISH_INTERACTION_CLASS (MSG#31)
+       1 Message::SUBSCRIBE_INTERACTION_CLASS (MSG#35)
+   79601 Message::QUERY_FEDERATE_TIME (MSG#86)
+   79601 Message::TIME_ADVANCE_REQUEST (MSG#92)
+       2 Message::GET_INTERACTION_CLASS_HANDLE (MSG#117)
+       4 Message::GET_PARAMETER_HANDLE (MSG#119)
+   79620 Message::TICK_REQUEST (MSG#142)
+   79605 Message::TICK_REQUEST_NEXT (MSG#143)
+       1 Message::JOIN_FEDERATION_EXECUTION_V4 (MSG#149)
+
+List of RTI initiated services 
+--------------------------------------------------
+       1 NetworkMessage::Type::ANNOUNCE_SYNCHRONIZATION_POINT (MSG#14)
+       1 NetworkMessage::Type::FEDERATION_SYNCHRONIZED (MSG#16)
+       2 NetworkMessage::Type::RECEIVE_INTERACTION (MSG#48)
+
+ Number of Federate messages : 318439
+ Number of RTIG messages : 4
+ TCP Socket  3 : total =       304 Bytes sent 
+ TCP Socket  3 : total =       950 Bytes received
+ UDP Socket  4 : total =         0 Bytes sent 
+ UDP Socket  4 : total =         0 Bytes received
+RTIA:: RTIA has thrown NetworkError exception.
+RTIA:: Reason: Connection closed by client.
+
+RTIA: Statistics (processed messages)
+List of federate initiated services 
+--------------------------------------------------
+       1 Message::OPEN_CONNEXION (MSG#1)
+       1 Message::RESIGN_FEDERATION_EXECUTION (MSG#6)
+       1 Message::SYNCHRONIZATION_POINT_ACHIEVED (MSG#11)
+       1 Message::PUBLISH_INTERACTION_CLASS (MSG#31)
+       1 Message::SUBSCRIBE_INTERACTION_CLASS (MSG#35)
+       1 Message::ENABLE_TIME_REGULATION (MSG#81)
+       1 Message::DISABLE_TIME_REGULATION (MSG#82)
+       1 Message::ENABLE_TIME_CONSTRAINED (MSG#83)
+       1 Message::DISABLE_TIME_CONSTRAINED (MSG#84)
+    7961 Message::QUERY_FEDERATE_TIME (MSG#86)
+    7960 Message::TIME_ADVANCE_REQUEST (MSG#92)
+       2 Message::GET_INTERACTION_CLASS_HANDLE (MSG#117)
+       4 Message::GET_PARAMETER_HANDLE (MSG#119)
+    7972 Message::TICK_REQUEST (MSG#142)
+    7964 Message::TICK_REQUEST_NEXT (MSG#143)
+       1 Message::JOIN_FEDERATION_EXECUTION_V4 (MSG#149)
+
+List of RTI initiated services 
+--------------------------------------------------
+   23881 NetworkMessage::Type::MESSAGE_NULL (MSG#2)
+       4 NetworkMessage::Type::SET_TIME_REGULATING (MSG#8)
+       1 NetworkMessage::Type::TIME_REGULATION_ENABLED (MSG#10)
+       1 NetworkMessage::Type::TIME_CONSTRAINED_ENABLED (MSG#11)
+       1 NetworkMessage::Type::ANNOUNCE_SYNCHRONIZATION_POINT (MSG#14)
+       1 NetworkMessage::Type::FEDERATION_SYNCHRONIZED (MSG#16)
+
+ Number of Federate messages : 31873
+ Number of RTIG messages : 23889
+ TCP Socket  3 : total =    255148 Bytes sent 
+ TCP Socket  3 : total =    765207 Bytes received
+ UDP Socket  4 : total =         0 Bytes sent 
+ UDP Socket  4 : total =         0 Bytes received

@@ -1,0 +1,1 @@
+$GEM5/build/RISCV/gem5.fast -d $GEM5/node0 $GEM5/configs/example/fs.py --cpu-clock=1GHz --kernel=vmlinux --dtb-file=gem5-simple-rv64.dtb -n 1 --disk-image=buildroot-rootfs.ext2 --mem-type=DDR4_2400_4x16 --mem-size=8GB --etherdump=$GEM5/node0/etherdump_file 

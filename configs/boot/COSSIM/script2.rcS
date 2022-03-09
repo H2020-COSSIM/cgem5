@@ -1,0 +1,11 @@
+#!/bin/sh
+ifconfig eth0 hw ether 00:90:00:00:00:02
+ifconfig lo 127.0.0.1                             #Configure the localhost
+ifconfig eth0 192.168.0.4                         #Configure the Ethernet
+ifconfig eth0 netmask 255.255.255.0               #Configure the Netmask
+ulimit -c unlimited
+
+/etc/init.d/xinetd start #Start the rsh server
+
+exec /bin/bash
+#/sbin/m5 exit

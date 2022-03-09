@@ -1,0 +1,19 @@
+GEM5 21.2.1.0 (March 2022) is used.
+
+The following changes have been performed in order to integrate GEM5 with the other COSSIM parts through CERTI 4.0.0 HLA.
+
+1.  Changing the file /gem5/src/SConscript
+2.  Adding files HLA_GEM5.cc | .hh in /gem5/src/dev/net
+3.  Adding file /gem5/src/dev/net/COSSIMetherlink.cc | .hh
+4.  Changing the file /gem5/src/dev/net/SConscript 
+5.  Changing the file /gem5/src/dev/net/Ethernet.py
+6.  Changing the file /gem5/src/python/m5/params.py
+7.  Changing the file /gem5/configs/common/Options.py
+8.  Changing the file /gem5/configs/common/FSConfig.py
+9.  Changing the file /gem5/configs/example/fs.py
+10. Changing the file /gem5/configs/example/arm/starter_fs.py
+11. Changing the file /gem5/configs/common/Simulation.py (McPat execution)
+12. Changing the file /gem5/src/python/gem5/simulate/exit_event.py (McPat execution)
+Until Here
+13. Changing the file /gem5/src/dev/x86/SouthBridge.py
+
