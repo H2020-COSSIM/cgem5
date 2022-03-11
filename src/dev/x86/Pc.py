@@ -57,7 +57,12 @@ class Pc(Platform):
     # Serial port and terminal
     com_1 = Uart8250()
     com_1.pio_addr = x86IOAddress(0x3f8)
-    com_1.device = Terminal()
+    
+    def attachX86Terminal(self, cossim_enabled, nodeNum): #COSSIM
+        if cossim_enabled:
+            self.com_1.device = Terminal(port=(3000+nodeNum))
+        else:
+            self.com_1.device = Terminal()
 
     # Devices to catch access to non-existant serial ports.
     fake_com_2 = IsaFake(pio_addr=x86IOAddress(0x2f8), pio_size=8)

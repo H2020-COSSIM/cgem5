@@ -85,7 +85,7 @@ def build_test_system(np):
                                             cmdline=cmdline)
     elif buildEnv['TARGET_ISA'] == "x86":
         test_sys = makeLinuxX86System(test_mem_mode, np, bm[0], args.ruby,
-                                      cmdline=cmdline)
+                                      cmdline=cmdline, cossim_enabled=args.cossim, nodeNum=args.nodeNum)
     elif buildEnv['TARGET_ISA'] == "arm":
         test_sys = makeArmSystem(
             test_mem_mode,
@@ -239,7 +239,7 @@ def build_drive_system(np):
         drive_sys = makeSparcSystem(drive_mem_mode, bm[1], cmdline=cmdline)
     elif buildEnv['TARGET_ISA'] == 'x86':
         drive_sys = makeLinuxX86System(drive_mem_mode, np, bm[1],
-                                       cmdline=cmdline)
+                                       cmdline=cmdline, cossim_enabled=args.cossim, nodeNum=args.nodeNum)
     elif buildEnv['TARGET_ISA'] == 'arm':
         drive_sys = makeArmSystem(drive_mem_mode, args.machine_type, np,
                                   bm[1], args.dtb_filename, cmdline=cmdline)
@@ -339,12 +339,12 @@ elif len(bm) == 1 and args.dist:
                         args.ethernet_linkspeed,
                         args.ethernet_linkdelay,
                         args.etherdump);
-elif len(bm) == 1 and options.cossim:
+elif len(bm) == 1 and args.cossim: #COSSIM
     # This system is part of a cossim-gem5 simulation
-    root = makeCOSSIMRoot(True, test_sys, options.etherdump, 
-			  options.nodeNum, options.TotalNodes, 
-			  options.sys_clock, options.SynchTime, 
-			  options.RxPacketTime)  
+    root = makeCOSSIMRoot(True, test_sys, args.etherdump, 
+			  args.nodeNum, args.TotalNodes, 
+			  args.sys_clock, args.SynchTime, 
+			  args.RxPacketTime)    
 elif len(bm) == 1:
     root = Root(full_system=True, system=test_sys)
 else:

@@ -13,7 +13,6 @@ The following changes have been performed in order to integrate GEM5 with the ot
 9.  Changing the file /gem5/configs/example/fs.py
 10. Changing the file /gem5/configs/example/arm/starter_fs.py
 11. Changing the file /gem5/configs/common/Simulation.py (McPat execution)
-12. Changing the file /gem5/src/python/gem5/simulate/exit_event.py (McPat execution)
-Until Here
-13. Changing the file /gem5/src/dev/x86/SouthBridge.py
+12. Changing the file /gem5/src/dev/x86/SouthBridge.py
+13. Changing the file /gem5/src/dev/x86/Pc.py
 

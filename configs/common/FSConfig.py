@@ -584,9 +584,12 @@ def makeX86System(mem_mode, numCPUs=1, mdesc=None, workload=None, Ruby=False):
     return self
 
 def makeLinuxX86System(mem_mode, numCPUs=1, mdesc=None, Ruby=False,
-                       cmdline=None):
+                       cmdline=None, cossim_enabled=False, nodeNum=0):
     # Build up the x86 system and then specialize it for Linux
     self = makeX86System(mem_mode, numCPUs, mdesc, X86FsLinux(), Ruby)
+    
+    # Attach the X86 Terminal
+    self.pc.attachX86Terminal(cossim_enabled, nodeNum) #COSSIM
 
     # We assume below that there's at least 1MB of memory. We'll require 2
     # just to avoid corner cases.
@@ -630,6 +633,7 @@ def makeLinuxX86System(mem_mode, numCPUs=1, mdesc=None, Ruby=False,
     if not cmdline:
         cmdline = 'earlyprintk=ttyS0 console=ttyS0 lpj=7999923 root=/dev/hda1'
     self.workload.command_line = fillInCmdline(mdesc, cmdline)
+    self.workload.command_line += ' init=/root/gem5_init.sh' #COSSIM
     return self
 
 def makeBareMetalRiscvSystem(mem_mode, mdesc=None, cmdline=None):
@@ -722,6 +726,8 @@ def makeCOSSIMRoot(full_system, testSystem, dumpfile,nodeNumber,
 
     if hasattr(testSystem, 'realview'): # COSSIM ARM Implementation #
         self.etherlink.interface = Parent.testsys.realview.ethernet.interface
+    elif hasattr(testSystem, 'pc'):     # COSSIM x86 Implementation #
+        self.etherlink.interface = Parent.testsys.pc.south_bridge.ethernet.interface
     else:
         fatal("Don't know how to connect these system together")
 

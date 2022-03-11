@@ -521,22 +521,22 @@ def addFSOptions(parser):
         "ethernet traffic")
 
     #COSSIM Options
-    parser.add_option("--cossim", action="store_true",
+    parser.add_argument("--cossim", action="store_true",
                       help="COSSIM distributed gem5 simulation.")
     
-    parser.add_option("--nodeNum", action="store", type="int", dest="nodeNum", default=0,
+    parser.add_argument("--nodeNum", action="store", type=int, dest="nodeNum", default=0,
                       help="Specify the number of node")
     
-    parser.add_option("--SynchTime", action="store", type="string", dest="SynchTime",
+    parser.add_argument("--SynchTime", action="store", type=str, dest="SynchTime",
                       help="Specify the Synchronization Time. For example: --SynchTime=1ms")
     
-    parser.add_option("--RxPacketTime", action="store", type="string", dest="RxPacketTime",
+    parser.add_argument("--RxPacketTime", action="store", type=str, dest="RxPacketTime",
                       help="Specify the minimum time in which the node can accept packet from the OMNET++. For example: --SynchTime=1ms")
     
-    parser.add_option("--TotalNodes", action="store", type="int", dest="TotalNodes", default=1,
+    parser.add_argument("--TotalNodes", action="store", type=str, dest="TotalNodes", default=1,
                       help="Specify the total number of nodes")
     
-    parser.add_option("--mcpat-xml", action="store", type="string", default="empty", dest="McPATXml",
+    parser.add_argument("--mcpat-xml", action="store", type=str, default="empty", dest="McPATXml",
                       help="Specify the McPAT xml ProcessorDescriptionFile")
 
     # Disk Image Options
