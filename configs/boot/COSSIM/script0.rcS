@@ -5,7 +5,7 @@ ifconfig eth0 192.168.0.2                         #Configure the Ethernet
 ifconfig eth0 netmask 255.255.255.0               #Configure the Netmask
 ulimit -c unlimited
 
-#/etc/init.d/xinetd start #Start the rsh server
+/etc/init.d/xinetd start #Start the rsh server
 
 exec /bin/bash
 #/sbin/m5 exit
