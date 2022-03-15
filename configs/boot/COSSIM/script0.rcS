@@ -1,11 +1,14 @@
 #!/bin/sh
-ifconfig eth0 hw ether 00:90:00:00:00:00
 ifconfig lo 127.0.0.1                             #Configure the localhost
-ifconfig eth0 192.168.0.2                         #Configure the Ethernet
+ifconfig eth0 10.0.1.2                            #Configure the Ethernet
 ifconfig eth0 netmask 255.255.255.0               #Configure the Netmask
+route add default gw 10.0.1.1                     #Configure the Gateway
 ulimit -c unlimited
+m5 resetstats
 
-/etc/init.d/xinetd start #Start the rsh server
+# Here you can put your application
+
+# END Here you can put your application
 
 exec /bin/bash
 #/sbin/m5 exit
