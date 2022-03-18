@@ -1,8 +1,8 @@
 # cgem5 - COSSIM-modified gem5 version. 
 
-This repository includes the modified gem5 simulator that integrates with the rest of the COSSIM framework. The cgem5 supports interconnection with IEEE HLA interfaces and modifies the network interface so that it can communicate with other cgem5 nodes through a network simulator. It should be noted that cgem5 can be used independently of COSSIM as a standalone package incorporating all the changes that have been integrated to the official GEM5 October 2017 release.
+This repository includes the modified gem5 simulator that integrates with the rest of the COSSIM framework. The cgem5 supports interconnection with IEEE HLA interfaces and modifies the network interface so that it can communicate with other cgem5 nodes through a network simulator. It should be noted that cgem5 can be used independently of COSSIM as a standalone package incorporating all the changes that have been integrated to the official GEM5 March 2022 release (v21.2.1).
 
-## Differences between cgem5 and official gem5 October 2017 version
+## Differences between cgem5 and official gem5 v21.2.1
 
 In the following subsections the limitations of the current, publicly available, version of GEM5 are described in tandem with the modifications and extensions that have been implemented to alleviate those restrictions.
 
@@ -20,7 +20,6 @@ In order to achieve the aforementioned objectives the CERTI HLA interface has be
 
 ### Supporting Parallel/Distributed Simulation
 
-
 The simplistic network model of GEM5 has another serious limitation. It only supports the simulation of two identical networked systems (for example two identically configured ARM processors with exactly the same peripherals and memory configuration). Furthermore, the simulation of both systems is executed within the same thread, thus a serious performance penalty is triggered while no synchronization primitives between the two systems are provided.
 
 By using HLA-complaint cGEM5 interfaces combined with a network simulator, the different cGEM5 instances can be efficiently connected. Each cGEM5 instance models a single node and different GEM5 instances are connected through a simulated network (more precisely through HLA links and a network simulator). As a result, all the following limitations of a conventional GEM5 simulation can be overcome:
@@ -31,7 +30,12 @@ By using HLA-complaint cGEM5 interfaces combined with a network simulator, the d
 
 These changes have been proposed in the paper: 
 
-Nikos Tampouratzis, Andreas Brokalakis, Antonios Nikitakis, Stamatis Andrianakis, Ioannis Papaefstathiou, Apostolos Dollas, "An Open-Source Extendable, Highly-Accurate and Security Aware CPS Simulator", to appear in IEEE International Conference on Distributed Computing in Sensor Systems, Ottawa, Canada, June 2017.
+<a id="1">[1]</a> 
+N. Tampouratzis, I. Papaefstathiou, A. Nikitakis, A. Brokalakis,
+S. Andrianakis, A. Dollas, M. Marcon, and E. Plebani, “A novel,
+highly integrated simulator for parallel and distributed systems,”
+ACM Trans. Archit. Code Optim., vol. 17, no. 1, Mar. 2020.
+Available: https://dl.acm.org/doi/10.1145/3378934
 
 ## Additional Parameters
 
