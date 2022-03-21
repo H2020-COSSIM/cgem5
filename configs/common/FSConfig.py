@@ -720,14 +720,14 @@ def makeCOSSIMRoot(full_system, testSystem, dumpfile,nodeNumber,
 		   _TotalNodes, sys_clock, synch_time,_RxPacketTime):
   
     self = Root(full_system = full_system)
-    self.testsys = testSystem
+    self.system = testSystem
     self.etherlink = COSSIMEtherLink(nodeNum=nodeNumber, TotalNodes=_TotalNodes, sys_clk=sys_clock,SynchTime=synch_time, RxPacketTime=_RxPacketTime) #system_clock is used for synchronization
    
 
     if hasattr(testSystem, 'realview'): # COSSIM ARM Implementation #
-        self.etherlink.interface = Parent.testsys.realview.ethernet.interface
+        self.etherlink.interface = Parent.system.realview.ethernet.interface
     elif hasattr(testSystem, 'pc'):     # COSSIM x86 Implementation #
-        self.etherlink.interface = Parent.testsys.pc.south_bridge.ethernet.interface
+        self.etherlink.interface = Parent.system.pc.south_bridge.ethernet.interface
     else:
         fatal("Don't know how to connect these system together")
 
