@@ -53,7 +53,7 @@ SynchTime | --SynchTime=10ms | Simulated time which all cgem5 systems are synchr
 RxPacketTime | --RxPacketTime=2ms | The minimum simulated time which the cgem5 system can receive Packet
 nodeNum | --nodeNum=0 | The number ID of this cgem5 System
 TotalNodes | --TotalNodes=2 | The total number of cgem5 Systems
-mcpat-xml | --mcpat-xml=ARM_A9.xml | Specifies the McPAT xml Processor Description File
+mcpat-xml | --mcpat-xml=ARM_AtomicSimpleCPU_template.xml | Specifies the McPAT xml Processor Description File
 
 
 ## Compiling and executing cgem5
