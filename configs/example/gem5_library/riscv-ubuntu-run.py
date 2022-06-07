@@ -52,7 +52,7 @@ from gem5.components.processors.simple_processor import (
 from gem5.components.processors.cpu_types import CPUTypes
 from gem5.isas import ISA
 from gem5.coherence_protocol import CoherenceProtocol
-from gem5.resources.resource import Resource
+from gem5.resources.resource import Resource, CustomDiskImageResource #COSSIM
 
 # This runs a check to ensure the gem5 binary is compiled for RISCV.
 
@@ -99,6 +99,13 @@ board = RiscvBoard(
 # When the simulation has ended you may inspect `m5out/system.pc.com_1.device`
 # to see the stdout.
 
+# ----------------------------- Add specific image (COSSIM) ---------------------------- #
+image = CustomDiskImageResource(
+    local_path = "/home/cossim/COSSIM/kernels/disks/riscv-ubuntu.img",
+    disk_root_partition = "1", # This is the partition in the disk image to use. 'None' if there is no disk image
+)
+
+
 board.set_kernel_disk_workload(
     # The RISCV bootloader will be automatically downloaded to the
     # `~/.cache/gem5` directory if not already present.
@@ -108,10 +115,9 @@ board.set_kernel_disk_workload(
     ),
     # The RISCV ubuntu image will be automatically downloaded to the
     # `~/.cache/gem5` directory if not already present.
-    disk_image=Resource(
-        "riscv-ubuntu-20.04-img",
-    ),
+    disk_image = image,
 )
+# ----------------------------- END Add specific image (COSSIM) ---------------------------- #
 
 root = Root(full_system=True, system=board)
 

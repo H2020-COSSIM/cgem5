@@ -49,8 +49,15 @@ from gem5.components.cachehierarchies.classic.\
 from gem5.components.processors.cpu_types import CPUTypes
 from gem5.isas import ISA
 from gem5.utils.requires import requires
-from gem5.resources.resource import Resource
+from gem5.resources.resource import Resource, CustomDiskImageResource #COSSIM
 from gem5.simulate.simulator import Simulator
+
+import os, argparse #COSSIM
+
+from m5.objects import EtherLink, COSSIMEtherLink, EtherDump #COSSIM
+
+default_kernel = 'riscv-bootloader-vmlinux-5.10-PCI' #COSSIM
+default_disk   = 'riscv-disk-img'
 
 # Run a check to ensure the right version of gem5 is being used.
 requires(isa_required=ISA.RISCV)
@@ -68,6 +75,42 @@ memory = SingleChannelDDR3_1600()
 # Setup a single core Processor.
 processor = SimpleProcessor(cpu_type=CPUTypes.TIMING, num_cores=1)
 
+# ----------------------------- Add Options (COSSIM) ---------------------------- #
+parser = argparse.ArgumentParser()
+parser.add_argument("--kernel", type=str, default=default_kernel,
+                        help="Linux kernel")
+
+parser.add_argument("--disk-image", type=str,
+                        default=default_disk,
+                        help="Disk to instantiate")
+
+parser.add_argument("--cossim", action="store_true",
+                      help="COSSIM distributed gem5 simulation.")
+    
+parser.add_argument("--nodeNum", action="store", type=int, dest="nodeNum", default=0,
+                      help="Specify the number of node")
+    
+parser.add_argument("--SynchTime", action="store", type=str, dest="SynchTime",
+                      help="Specify the Synchronization Time. For example: --SynchTime=1ms")
+    
+parser.add_argument("--RxPacketTime", action="store", type=str, dest="RxPacketTime",
+                      help="Specify the minimum time in which the node can accept packet from the OMNET++. For example: --SynchTime=1ms")
+    
+parser.add_argument("--TotalNodes", action="store", type=str, dest="TotalNodes", default=1,
+                      help="Specify the total number of nodes")
+    
+parser.add_argument("--sys-clock", action="store", type=str, dest="sys_clock", 
+                      default="1GHz",
+                      help = """Top-level clock for blocks running at system
+                      speed""")
+
+parser.add_argument("--etherdump", action="store", type=str, default="",
+                      help="Specify the filename to dump a pcap capture of"\
+                      " the ethernet traffic")
+
+args = parser.parse_args()
+# ---------------------------- Parse Options --------------------------- #
+
 # Setup the board.
 board = RiscvBoard(
     clk_freq="1GHz",
@@ -76,11 +119,40 @@ board = RiscvBoard(
     cache_hierarchy=cache_hierarchy,
 )
 
+board.platform.attachRISCVTerminal(args.cossim, args.nodeNum) #COSSIM
+
+# ----------------------------- Add specific kernel & image (COSSIM) ---------------------------- #
+kernel_path = os.getenv('M5_PATH') + "/binaries/" + args.kernel
+image_path  = os.getenv('M5_PATH') + "/disks/"    + args.disk_image
+
+kernel_custom=CustomDiskImageResource( #COSSIM PCI Kernel
+    local_path = kernel_path
+)
+
+image_custom = CustomDiskImageResource(
+    local_path = image_path
+)
+
 # Set the Full System workload.
 board.set_kernel_disk_workload(
-                   kernel=Resource("riscv-bootloader-vmlinux-5.10"),
-                   disk_image=Resource("riscv-disk-img"),
+                   #kernel=Resource("riscv-bootloader-vmlinux-5.10"),
+                   kernel=kernel_custom, #COSSIM
+                   #disk_image=Resource("riscv-disk-img"),
+                   disk_image=image_custom,
 )
+
+if args.cossim: #COSSIM
+    board.etherlink = COSSIMEtherLink(nodeNum=args.nodeNum, TotalNodes=args.TotalNodes, sys_clk=args.sys_clock,SynchTime=args.SynchTime, RxPacketTime=args.RxPacketTime) #system_clock is used for synchronization     
+    board.etherlink.interface = board.ethernet.interface
+else:
+    board.etherlink = EtherLink()
+    board.etherlink.int0 = board.ethernet.interface
+
+if args.etherdump: #COSSIM
+    board.etherdump = EtherDump(file=args.etherdump)
+    board.etherlink.dump = board.etherdump
+
+# ----------------------------- END Add specific kernel & image (COSSIM) ---------------------------- #
 
 simulator = Simulator(board=board)
 print("Beginning simulation!")
