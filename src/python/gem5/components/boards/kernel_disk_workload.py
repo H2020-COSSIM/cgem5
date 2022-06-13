@@ -137,6 +137,7 @@ class KernelDiskWorkload:
         readfile_contents: Optional[str] = None,
         kernel_args: Optional[List[str]] = None,
         exit_on_work_items: bool = True,
+        fast_boot_ubuntu: Optional[bool] = False,
     ) -> None:
         """
         This function allows the setting of a full-system run with a Kernel
@@ -165,6 +166,9 @@ class KernelDiskWorkload:
         ).format(
             root_value=self.get_default_kernel_root_val(disk_image=disk_image)
         )
+        
+        if (fast_boot_ubuntu):
+            self.workload.command_line += ' init=/root/gem5_init.sh'
 
         # Set the readfile.
         if readfile:

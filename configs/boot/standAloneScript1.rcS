@@ -17,11 +17,11 @@ echo "192.168.0.2 node0" >> /etc/hosts
 echo "node0 root" >> /root/.rhosts
 echo "node1 root" >> /root/.rhosts
 
-echo "node0:2" >> host_file
+echo "node0:4" >> host_file
 
 #mpirun -n 2 -f host_file ./a.out
 
-#mpirun -n 2 -f host_file ./HPCG/build/bin/xhpcg --nx=16 --ny=16 --nz=16 --npx=2 --npy=1 --npz=1 --rt=1
+mpirun -n 4 -f host_file ./HPCG/build/bin/xhpcg --nx=16 --ny=16 --nz=16 --npx=2 --npy=2 --npz=1 --rt=1
 
 exec /bin/bash
 #/sbin/m5 exit

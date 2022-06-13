@@ -54,6 +54,13 @@ from gem5.isas import ISA
 from gem5.coherence_protocol import CoherenceProtocol
 from gem5.resources.resource import Resource, CustomDiskImageResource #COSSIM
 
+import os, argparse #COSSIM
+
+from m5.objects import EtherLink, COSSIMEtherLink, EtherDump #COSSIM
+
+default_kernel = 'riscv-bootloader-vmlinux-5.10-PCI' #COSSIM
+default_disk   = 'riscv-ubuntu.img'
+
 # This runs a check to ensure the gem5 binary is compiled for RISCV.
 
 requires(
@@ -72,14 +79,62 @@ cache_hierarchy = PrivateL1PrivateL2CacheHierarchy(
     l2_size="256kB",
 )
 
-# Memory: Dual Channel DDR4 2400 DRAM device.
 
-memory = DualChannelDDR4_2400(size = "3GB")
+
+# ----------------------------- Add Options (COSSIM) ---------------------------- #
+parser = argparse.ArgumentParser()
+parser.add_argument("--kernel", type=str, default=default_kernel,
+                        help="Linux kernel")
+
+parser.add_argument("--disk-image", type=str,
+                        default=default_disk,
+                        help="Disk to instantiate")
+
+parser.add_argument("--cossim", action="store_true",
+                      help="COSSIM distributed gem5 simulation.")
+    
+parser.add_argument("--nodeNum", action="store", type=int, dest="nodeNum", default=0,
+                      help="Specify the number of node")
+    
+parser.add_argument("--SynchTime", action="store", type=str, dest="SynchTime",
+                      help="Specify the Synchronization Time. For example: --SynchTime=1ms")
+    
+parser.add_argument("--RxPacketTime", action="store", type=str, dest="RxPacketTime",
+                      help="Specify the minimum time in which the node can accept packet from the OMNET++. For example: --SynchTime=1ms")
+    
+parser.add_argument("--TotalNodes", action="store", type=str, dest="TotalNodes", default=1,
+                      help="Specify the total number of nodes")
+    
+parser.add_argument("--sys-clock", action="store", type=str, dest="sys_clock", 
+                      default="1GHz",
+                      help = """Top-level clock for blocks running at system
+                      speed""")
+
+parser.add_argument("--etherdump", action="store", type=str, default="",
+                      help="Specify the filename to dump a pcap capture of"\
+                      " the ethernet traffic")
+
+parser.add_argument("--script", type=str, default="",
+                        help = "Linux bootscript")
+
+parser.add_argument("--num-cores", type=int, default=2,
+                        help="Number of CPU cores")
+
+parser.add_argument("--mem-size", action="store", type=str,
+                        default="3GB",
+                        help="Specify the physical memory size")
+
+args = parser.parse_args()
+# ---------------------------- Parse Options --------------------------- #
+
+
+# Memory: Dual Channel DDR4 2400 DRAM device.
+memory = DualChannelDDR4_2400(size = args.mem_size)
 
 # Here we setup the processor. We use a simple processor.
 processor = SimpleProcessor(
     cpu_type=CPUTypes.TIMING,
-    num_cores=2,
+    num_cores=args.num_cores,
 )
 
 # Here we setup the board. The RiscvBoard allows for Full-System RISCV
@@ -91,6 +146,10 @@ board = RiscvBoard(
     cache_hierarchy=cache_hierarchy,
 )
 
+board.platform.attachRISCVTerminal(args.cossim, args.nodeNum) #COSSIM
+
+board.readScript(args.script) #COSSIM
+
 # Here we set the Full System workload.
 
 # The `set_kernel_disk_workload` function for the RiscvBoard accepts a
@@ -99,25 +158,42 @@ board = RiscvBoard(
 # When the simulation has ended you may inspect `m5out/system.pc.com_1.device`
 # to see the stdout.
 
-# ----------------------------- Add specific image (COSSIM) ---------------------------- #
-image = CustomDiskImageResource(
-    local_path = "/home/cossim/COSSIM/kernels/disks/riscv-ubuntu.img",
-    disk_root_partition = "1", # This is the partition in the disk image to use. 'None' if there is no disk image
+# ----------------------------- Add specific kernel & image (COSSIM) ---------------------------- #
+kernel_path = os.getenv('M5_PATH') + "/binaries/" + args.kernel
+image_path  = os.getenv('M5_PATH') + "/disks/"    + args.disk_image
+
+kernel_custom=CustomDiskImageResource( #COSSIM PCI Kernel
+    local_path = kernel_path
 )
 
+image_custom = CustomDiskImageResource(
+    local_path = image_path,
+    disk_root_partition = "1",
+)
 
+# Set the Full System workload.
 board.set_kernel_disk_workload(
-    # The RISCV bootloader will be automatically downloaded to the
-    # `~/.cache/gem5` directory if not already present.
-    # The riscv-ubuntu boot-test was tested with riscv-bootloader-5.10
-    kernel=Resource(
-        "riscv-bootloader-vmlinux-5.10",
-    ),
-    # The RISCV ubuntu image will be automatically downloaded to the
-    # `~/.cache/gem5` directory if not already present.
-    disk_image = image,
+                   #kernel=Resource("riscv-bootloader-vmlinux-5.10"),
+                   kernel=kernel_custom, #COSSIM
+                   #disk_image=Resource("riscv-disk-img"),
+                   disk_image=image_custom,
+                   fast_boot_ubuntu=True,
 )
+
 # ----------------------------- END Add specific image (COSSIM) ---------------------------- #
+
+if args.cossim: #COSSIM
+    board.etherlink = COSSIMEtherLink(nodeNum=args.nodeNum, TotalNodes=args.TotalNodes, sys_clk=args.sys_clock,SynchTime=args.SynchTime, RxPacketTime=args.RxPacketTime) #system_clock is used for synchronization     
+    board.etherlink.interface = board.ethernet.interface
+else:
+    board.etherlink = EtherLink()
+    board.etherlink.int0 = board.ethernet.interface
+
+if args.etherdump: #COSSIM
+    board.etherdump = EtherDump(file=args.etherdump)
+    board.etherlink.dump = board.etherdump
+
+
 
 root = Root(full_system=True, system=board)
 

@@ -69,12 +69,6 @@ cache_hierarchy = PrivateL1PrivateL2CacheHierarchy(
     l1d_size="32KiB", l1i_size="32KiB", l2_size="512KiB"
 )
 
-# Setup the system memory.
-memory = SingleChannelDDR3_1600()
-
-# Setup a single core Processor.
-processor = SimpleProcessor(cpu_type=CPUTypes.TIMING, num_cores=1)
-
 # ----------------------------- Add Options (COSSIM) ---------------------------- #
 parser = argparse.ArgumentParser()
 parser.add_argument("--kernel", type=str, default=default_kernel,
@@ -108,8 +102,25 @@ parser.add_argument("--etherdump", action="store", type=str, default="",
                       help="Specify the filename to dump a pcap capture of"\
                       " the ethernet traffic")
 
+parser.add_argument("--script", type=str, default="",
+                        help = "Linux bootscript")
+
+parser.add_argument("--num-cores", type=int, default=1,
+                        help="Number of CPU cores")
+
+parser.add_argument("--mem-size", action="store", type=str,
+                        default="3GB",
+                        help="Specify the physical memory size")
+
+
 args = parser.parse_args()
 # ---------------------------- Parse Options --------------------------- #
+
+# Setup the system memory.
+memory = SingleChannelDDR3_1600(size = args.mem_size)
+
+# Setup a single core Processor.
+processor = SimpleProcessor(cpu_type=CPUTypes.TIMING, num_cores=args.num_cores)
 
 # Setup the board.
 board = RiscvBoard(
@@ -120,6 +131,8 @@ board = RiscvBoard(
 )
 
 board.platform.attachRISCVTerminal(args.cossim, args.nodeNum) #COSSIM
+
+board.readScript(args.script) #COSSIM
 
 # ----------------------------- Add specific kernel & image (COSSIM) ---------------------------- #
 kernel_path = os.getenv('M5_PATH') + "/binaries/" + args.kernel

@@ -137,6 +137,9 @@ class RiscvBoard(AbstractBoard, KernelDiskWorkload):
         # general enough.
         self._on_chip_devices = [self.platform.clint, self.platform.plic]
         self._off_chip_devices = [self.platform.uart, self.disk, self.rng]
+        
+    def readScript(self, script):
+        self.readfile = script #COSSIM
 
     def _setup_io_devices(self) -> None:
         """Connect the I/O devices to the I/O bus"""
@@ -484,4 +487,4 @@ class RiscvBoard(AbstractBoard, KernelDiskWorkload):
 
     @overrides(KernelDiskWorkload)
     def get_default_kernel_args(self) -> List[str]:
-        return ["console=ttyS0", "root={root_value}", "ro"]
+        return ["console=ttyS0", "root={root_value}", "rw"]
