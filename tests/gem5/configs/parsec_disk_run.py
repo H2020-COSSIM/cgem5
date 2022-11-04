@@ -43,7 +43,10 @@ from gem5.components.memory import SingleChannelDDR3_1600
 from gem5.components.processors.simple_switchable_processor import (
     SimpleSwitchableProcessor,
 )
-from gem5.components.processors.cpu_types import CPUTypes
+from gem5.components.processors.cpu_types import (
+    get_cpu_types_str_set,
+    get_cpu_type_from_str,
+)
 from gem5.isas import ISA
 from gem5.runtime import get_runtime_isa, get_runtime_coherence_protocol
 from gem5.simulate.simulator import Simulator
@@ -75,7 +78,7 @@ parser.add_argument(
     "-b",
     "--boot-cpu",
     type=str,
-    choices=("kvm", "timing", "atomic", "o3"),
+    choices=get_cpu_types_str_set(),
     required=False,
     help="The CPU type to run before and after the ROI. If not specified will "
     "be equal to that of the CPU type used in the ROI.",
@@ -85,7 +88,7 @@ parser.add_argument(
     "-c",
     "--cpu",
     type=str,
-    choices=("kvm", "timing", "atomic", "o3"),
+    choices=get_cpu_types_str_set(),
     required=True,
     help="The CPU type used in the ROI.",
 )
@@ -145,19 +148,15 @@ args = parser.parse_args()
 
 if args.mem_system == "classic":
 
-    from gem5.components.cachehierarchies.classic.\
-        private_l1_private_l2_cache_hierarchy import (
+    from gem5.components.cachehierarchies.classic.private_l1_private_l2_cache_hierarchy import (
         PrivateL1PrivateL2CacheHierarchy,
     )
 
     cache_hierarchy = PrivateL1PrivateL2CacheHierarchy(
-        l1d_size="32kB",
-        l1i_size="32kB",
-        l2_size="256kB",
+        l1d_size="32kB", l1i_size="32kB", l2_size="256kB"
     )
 elif args.mem_system == "mesi_two_level":
-    from gem5.components.cachehierarchies.ruby.\
-        mesi_two_level_cache_hierarchy import (
+    from gem5.components.cachehierarchies.ruby.mesi_two_level_cache_hierarchy import (
         MESITwoLevelCacheHierarchy,
     )
 
@@ -174,23 +173,9 @@ elif args.mem_system == "mesi_two_level":
 # Setup the memory system.
 memory = SingleChannelDDR3_1600(size="3GB")
 
-
-def input_to_cputype(input: str) -> CPUTypes:
-    if input == "kvm":
-        return CPUTypes.KVM
-    elif input == "timing":
-        return CPUTypes.TIMING
-    elif input == "atomic":
-        return CPUTypes.ATOMIC
-    elif input == "o3":
-        return CPUTypes.O3
-    else:
-        raise NotADirectoryError("Unknown CPU type '{}'.".format(input))
-
-
-roi_type = input_to_cputype(args.cpu)
+roi_type = get_cpu_type_from_str(args.cpu)
 if args.boot_cpu != None:
-    boot_type = input_to_cputype(args.boot_cpu)
+    boot_type = get_cpu_type_from_str(args.boot_cpu)
 else:
     boot_type = roi_type
 
@@ -198,6 +183,7 @@ else:
 processor = SimpleSwitchableProcessor(
     starting_core_type=boot_type,
     switch_core_type=roi_type,
+    isa=ISA.X86,
     num_cores=args.num_cpus,
 )
 
@@ -220,12 +206,10 @@ command = (
 
 board.set_kernel_disk_workload(
     kernel=Resource(
-        "x86-linux-kernel-5.4.49",
-        resource_directory=args.resource_directory,
+        "x86-linux-kernel-5.4.49", resource_directory=args.resource_directory
     ),
     disk_image=Resource(
-        "x86-parsec",
-        resource_directory=args.resource_directory,
+        "x86-parsec", resource_directory=args.resource_directory
     ),
     readfile_contents=command,
 )
@@ -242,13 +226,15 @@ def workbegin():
     processor.switch()
     yield False
 
+
 def workend():
     yield True
+
 
 simulator = Simulator(
     board=board,
     on_exit_event={
-        ExitEvent.WORKBEGIN : workbegin(),
+        ExitEvent.WORKBEGIN: workbegin(),
         ExitEvent.WORKEND: workend(),
     },
 )

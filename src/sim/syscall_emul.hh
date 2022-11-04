@@ -90,9 +90,9 @@
 #include "base/intmath.hh"
 #include "base/loader/object_file.hh"
 #include "base/logging.hh"
+#include "base/random.hh"
 #include "base/trace.hh"
 #include "base/types.hh"
-#include "config/the_isa.hh"
 #include "cpu/base.hh"
 #include "cpu/thread_context.hh"
 #include "kern/linux/linux.hh"
@@ -1601,9 +1601,12 @@ statfsFunc(SyscallDesc *desc, ThreadContext *tc,
 
 template <class OS>
 SyscallReturn
-cloneFunc(SyscallDesc *desc, ThreadContext *tc, RegVal flags, RegVal newStack,
+doClone(SyscallDesc *desc, ThreadContext *tc, RegVal flags, RegVal newStack,
           VPtr<> ptidPtr, VPtr<> ctidPtr, VPtr<> tlsPtr)
 {
+    DPRINTF(SyscallVerbose, "Doing clone. pid: %#llx, ctid: %#llx, tls: %#llx"
+                            " flags: %#llx, stack: %#llx\n",
+            ptidPtr.addr(), ctidPtr.addr(), tlsPtr.addr(), flags, newStack);
     auto p = tc->getProcessPtr();
 
     if (((flags & OS::TGT_CLONE_SIGHAND)&& !(flags & OS::TGT_CLONE_VM)) ||
@@ -1672,6 +1675,7 @@ cloneFunc(SyscallDesc *desc, ThreadContext *tc, RegVal flags, RegVal newStack,
     }
 
     if (flags & OS::TGT_CLONE_THREAD) {
+        cp->pTable->initState();
         cp->pTable->shared = true;
         cp->useForClone = true;
     }
@@ -1710,6 +1714,30 @@ cloneFunc(SyscallDesc *desc, ThreadContext *tc, RegVal flags, RegVal newStack,
     }
 
     return cp->pid();
+}
+
+template <class OS>
+SyscallReturn
+clone3Func(SyscallDesc *desc, ThreadContext *tc,
+           VPtr<typename OS::tgt_clone_args> cl_args, RegVal size)
+{
+    VPtr<uint64_t> ptidPtr((Addr)cl_args->parent_tid, tc);
+    VPtr<uint64_t> ctidPtr((Addr)cl_args->child_tid, tc);
+    VPtr<uint64_t> tlsPtr((Addr)cl_args->tls, tc);
+    // Clone3 gives the stack as the *lowest* address, but clone/__clone2
+    // expects the stack parameter to be the actual stack pointer
+    uint64_t new_stack = cl_args->stack + cl_args->stack_size;
+    uint64_t flags = cl_args->flags;
+
+    return doClone<OS>(desc, tc, flags, new_stack, ptidPtr, ctidPtr, tlsPtr);
+}
+
+template <class OS>
+SyscallReturn
+cloneFunc(SyscallDesc *desc, ThreadContext *tc, RegVal flags, RegVal newStack,
+          VPtr<> ptidPtr, VPtr<> ctidPtr, VPtr<> tlsPtr)
+{
+    return doClone<OS>(desc, tc, flags, newStack, ptidPtr, ctidPtr, tlsPtr);
 }
 
 template <class OS>
@@ -3037,6 +3065,23 @@ ftruncateFunc(SyscallDesc *desc, ThreadContext *tc, int tgt_fd,
 
     int result = ftruncate(sim_fd, length);
     return (result == -1) ? -errno : result;
+}
+
+template <typename OS>
+SyscallReturn
+getrandomFunc(SyscallDesc *desc, ThreadContext *tc,
+              VPtr<> buf_ptr, typename OS::size_t count,
+              unsigned int flags)
+{
+    SETranslatingPortProxy proxy(tc);
+
+    TypedBufferArg<uint8_t> buf(buf_ptr, count);
+    for (int i = 0; i < count; ++i) {
+        buf[i] = gem5::random_mt.random<uint8_t>();
+    }
+    buf.copyOut(proxy);
+
+    return count;
 }
 
 } // namespace gem5

@@ -82,8 +82,6 @@ SelfDebug::testBreakPoints(ThreadContext *tc, Addr vaddr)
 
     to32 = targetAArch32(tc);
 
-    init(tc);
-
     if (!isDebugEnabled(tc))
         return NoFault;
 
@@ -127,8 +125,6 @@ SelfDebug::testWatchPoints(ThreadContext *tc, Addr vaddr, bool write,
 {
     setAArch32(tc);
     to32 = targetAArch32(tc);
-    if (!initialized)
-        init(tc);
     if (!isDebugEnabled(tc) || !mde)
         return NoFault;
 
@@ -165,8 +161,9 @@ bool
 SelfDebug::isDebugEnabledForEL64(ThreadContext *tc, ExceptionLevel el,
                          bool secure, bool mask)
 {
-    bool route_to_el2 =  ArmSystem::haveEL(tc, EL2) &&
-                         (!secure || HaveSecureEL2Ext(tc)) && enableTdeTge;
+    bool route_to_el2 = ArmSystem::haveEL(tc, EL2) &&
+                        (!secure || HaveExt(tc, ArmExtension::FEAT_SEL2)) &&
+                        enableTdeTge;
 
     ExceptionLevel target_el = route_to_el2 ? EL2 : EL1;
     if (oslk || (sdd && secure && ArmSystem::haveEL(tc, EL3))) {
@@ -256,12 +253,13 @@ BrkPoint::test(ThreadContext *tc, Addr pc, ExceptionLevel el, DBGBCR ctr,
         break;
 
       case 0x6:
-        if (HaveVirtHostExt(tc) && !ELIsInHost(tc, el))
+        if (HaveExt(tc, ArmExtension::FEAT_VHE) && !ELIsInHost(tc, el))
              v = testContextMatch(tc, true);
         break;
 
       case 0x7:
-        if (HaveVirtHostExt(tc) && !ELIsInHost(tc, el) && from_link)
+        if (HaveExt(tc, ArmExtension::FEAT_VHE) && !ELIsInHost(tc, el) &&
+            from_link)
             v = testContextMatch(tc, true);
         break;
 
@@ -292,27 +290,29 @@ BrkPoint::test(ThreadContext *tc, Addr pc, ExceptionLevel el, DBGBCR ctr,
         break;
 
       case 0xc:
-        if (HaveVirtHostExt(tc) && (!isSecure(tc)|| HaveSecureEL2Ext(tc)))
+        if (HaveExt(tc, ArmExtension::FEAT_VHE) &&
+            (!isSecure(tc)|| HaveExt(tc, ArmExtension::FEAT_SEL2)))
             v = testContextMatch(tc, false);
         break;
 
       case 0xd:
-        if (HaveVirtHostExt(tc) && from_link &&
-            (!isSecure(tc)|| HaveSecureEL2Ext(tc))) {
+        if (HaveExt(tc, ArmExtension::FEAT_VHE) && from_link &&
+            (!isSecure(tc)|| HaveExt(tc, ArmExtension::FEAT_SEL2))) {
              v = testContextMatch(tc, false);
         }
         break;
 
       case 0xe:
-        if (HaveVirtHostExt(tc) && !ELIsInHost(tc, el) &&
-            (!isSecure(tc)|| HaveSecureEL2Ext(tc))) {
+        if (HaveExt(tc, ArmExtension::FEAT_VHE) && !ELIsInHost(tc, el) &&
+            (!isSecure(tc)|| HaveExt(tc, ArmExtension::FEAT_SEL2))) {
             v = testContextMatch(tc, true); // CONTEXTIDR_EL1
             v = v && testContextMatch(tc, false); // CONTEXTIDR_EL2
         }
         break;
       case 0xf:
-        if (HaveVirtHostExt(tc) && !ELIsInHost(tc, el) && from_link &&
-            (!isSecure(tc)|| HaveSecureEL2Ext(tc))) {
+        if (HaveExt(tc, ArmExtension::FEAT_VHE) && !ELIsInHost(tc, el) &&
+            from_link &&
+            (!isSecure(tc)|| HaveExt(tc, ArmExtension::FEAT_SEL2))) {
             v = testContextMatch(tc, true); // CONTEXTIDR_EL1
             v = v && testContextMatch(tc, false); // CONTEXTIDR_EL2
         }
@@ -326,8 +326,6 @@ BrkPoint::test(ThreadContext *tc, Addr pc, ExceptionLevel el, DBGBCR ctr,
 void
 SelfDebug::init(ThreadContext *tc)
 {
-    if (initialized)
-        return;
     CPSR cpsr = tc->readMiscReg(MISCREG_CPSR);
     aarch32 = cpsr.width == 1;
 
@@ -349,16 +347,14 @@ SelfDebug::init(ThreadContext *tc)
     }
 
     for (int i = 0; i <= dfr.wrps; i++) {
-        WatchPoint wtp = WatchPoint((MiscRegIndex)(MISCREG_DBGWCR0 + i),
-                                    (MiscRegIndex)(MISCREG_DBGWVR0 + i),
+        WatchPoint wtp = WatchPoint((MiscRegIndex)(MISCREG_DBGWCR0_EL1 + i),
+                                    (MiscRegIndex)(MISCREG_DBGWVR0_EL1 + i),
                                     this, (bool)mm_fr2.varange, aarch32);
-        const DBGWCR ctr = tc->readMiscReg(MISCREG_DBGWCR0 + i);
+        const DBGWCR ctr = tc->readMiscReg(MISCREG_DBGWCR0_EL1 + i);
 
         wtp.updateControl(ctr);
         arWatchPoints.push_back(wtp);
     }
-
-    initialized = true;
 
     RegVal oslar_el1 = tc->readMiscReg(MISCREG_OSLAR_EL1);
     updateOSLock(oslar_el1);
@@ -717,8 +713,6 @@ SelfDebug::testVectorCatch(ThreadContext *tc, Addr addr,
 
     setAArch32(tc);
     to32 = targetAArch32(tc);
-    if (!initialized)
-        init(tc);
     if (!isDebugEnabled(tc) || !mde || !aarch32)
         return NoFault;
 
@@ -731,7 +725,7 @@ SelfDebug::testVectorCatch(ThreadContext *tc, Addr addr,
     if (do_debug) {
         if (enableTdeTge) {
             return std::make_shared<HypervisorTrap>(0, 0x22,
-                                        EC_PREFETCH_ABORT_TO_HYP);
+                                        ExceptionClass::PREFETCH_ABORT_TO_HYP);
         } else {
             return std::make_shared<PrefetchAbort>(addr,
                                        ArmFault::DebugEvent, false,

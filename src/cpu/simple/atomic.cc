@@ -43,7 +43,6 @@
 
 #include "arch/generic/decoder.hh"
 #include "base/output.hh"
-#include "config/the_isa.hh"
 #include "cpu/exetrace.hh"
 #include "cpu/utils.hh"
 #include "debug/Drain.hh"
@@ -52,7 +51,7 @@
 #include "mem/packet.hh"
 #include "mem/packet_access.hh"
 #include "mem/physical.hh"
-#include "params/AtomicSimpleCPU.hh"
+#include "params/BaseAtomicSimpleCPU.hh"
 #include "sim/faults.hh"
 #include "sim/full_system.hh"
 #include "sim/system.hh"
@@ -72,7 +71,7 @@ AtomicSimpleCPU::init()
     data_amo_req->setContext(cid);
 }
 
-AtomicSimpleCPU::AtomicSimpleCPU(const AtomicSimpleCPUParams &p)
+AtomicSimpleCPU::AtomicSimpleCPU(const BaseAtomicSimpleCPUParams &p)
     : BaseSimpleCPU(p),
       tickEvent([this]{ tick(); }, "AtomicSimpleCPU tick",
                 false, Event::CPU_Tick_Pri),
@@ -406,7 +405,8 @@ AtomicSimpleCPU::readMem(Addr addr, uint8_t *data, unsigned size,
             }
             dcache_access = true;
 
-            assert(!pkt.isError());
+            panic_if(pkt.isError(), "Data fetch (%s) failed: %s",
+                    pkt.getAddrRange().to_string(), pkt.print());
 
             if (req->isLLSC()) {
                 thread->getIsaPtr()->handleLockedRead(req);
@@ -508,8 +508,8 @@ AtomicSimpleCPU::writeMem(uint8_t *data, unsigned size, Addr addr,
                     threadSnoop(&pkt, curThread);
                 }
                 dcache_access = true;
-                assert(!pkt.isError());
-
+                panic_if(pkt.isError(), "Data write (%s) failed: %s",
+                        pkt.getAddrRange().to_string(), pkt.print());
                 if (req->isSwap()) {
                     assert(res && curr_frag_id == 0);
                     memcpy(res, pkt.getConstPtr<uint8_t>(), size);
@@ -597,7 +597,8 @@ AtomicSimpleCPU::amoMem(Addr addr, uint8_t* data, unsigned size,
 
         dcache_access = true;
 
-        assert(!pkt.isError());
+        panic_if(pkt.isError(), "Atomic access (%s) failed: %s",
+                pkt.getAddrRange().to_string(), pkt.print());
         assert(!req->isLLSC());
     }
 
@@ -752,7 +753,8 @@ AtomicSimpleCPU::fetchInstMem()
     pkt.dataStatic(decoder->moreBytesPtr());
 
     Tick latency = sendPacket(icachePort, &pkt);
-    assert(!pkt.isError());
+    panic_if(pkt.isError(), "Instruction fetch (%s) failed: %s",
+            pkt.getAddrRange().to_string(), pkt.print());
 
     return latency;
 }

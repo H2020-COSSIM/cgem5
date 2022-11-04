@@ -24,7 +24,7 @@
 # (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-intCodeTemplate = '''
+intCodeTemplate = """
 def rom
 {
     # This vectors the CPU into an interrupt handler in long mode.
@@ -174,30 +174,33 @@ def rom
 
     eret
 };
-'''
+"""
 
-microcode = \
-intCodeTemplate % {\
-    "startLabel" : "longModeInterrupt",
-    "gateCheckType" : "IntGateCheck",
-    "errorCodeSize" : 0,
-    "errorCodeCode" : ""
-} + \
-intCodeTemplate % {\
-    "startLabel" : "longModeSoftInterrupt",
-    "gateCheckType" : "SoftIntGateCheck",
-    "errorCodeSize" : 0,
-    "errorCodeCode" : ""
-} + \
-intCodeTemplate % {\
-    "startLabel" : "longModeInterruptWithError",
-    "gateCheckType" : "IntGateCheck",
-    "errorCodeSize" : 8,
-    "errorCodeCode" : '''
+microcode = (
+    intCodeTemplate
+    % {
+        "startLabel": "longModeInterrupt",
+        "gateCheckType": "IntGateCheck",
+        "errorCodeSize": 0,
+        "errorCodeCode": "",
+    }
+    + intCodeTemplate
+    % {
+        "startLabel": "longModeSoftInterrupt",
+        "gateCheckType": "SoftIntGateCheck",
+        "errorCodeSize": 0,
+        "errorCodeCode": "",
+    }
+    + intCodeTemplate
+    % {
+        "startLabel": "longModeInterruptWithError",
+        "gateCheckType": "IntGateCheck",
+        "errorCodeSize": 8,
+        "errorCodeCode": """
     st t15, hs, [1, t0, t6], dataSize=8, addressSize=8
-    '''
-} + \
-'''
+    """,
+    }
+    + """
 def rom
 {
     # This vectors the CPU into an interrupt handler in legacy mode.
@@ -216,4 +219,55 @@ def rom
     halt
     eret
 };
-'''
+
+def rom
+{
+    extern realModeInterrupt:
+
+    # t1 - The vector.
+    # t2 - The old CS.
+    # t7 - The old RIP.
+    # t3 - RFLAGS
+    # t4 - The new CS.
+    # t5 - The new RIP.
+
+    rdsel t2, cs, dataSize=8
+    rflags t3, dataSize=8
+
+    ld t4, idtr, [4, t1, t0], 2, dataSize=2, addressSize=2
+    ld t5, idtr, [4, t1, t0], dataSize=2, addressSize=2
+
+    # Make sure pushes after the first will also work.
+    cda ss, [1, t0, rsp], -4, dataSize=2, addressSize=2
+    cda ss, [1, t0, rsp], -6, dataSize=2, addressSize=2
+
+    # Push the low 16 bits of RFLAGS.
+    st t3, ss, [1, t0, rsp], -2, dataSize=2, addressSize=2
+    # Push CS.
+    st t2, ss, [1, t0, rsp], -4, dataSize=2, addressSize=2
+    # Push the old RIP.
+    st t7, ss, [1, t0, rsp], -6, dataSize=2, addressSize=2
+
+    # Update RSP.
+    subi rsp, rsp, 6, dataSize=2
+
+    # Set the new CS selector.
+    wrsel cs, t4, dataSize=2
+    # Make sure there isn't any junk in the upper bits of the base.
+    mov t4, t0, t4, dataSize=2
+    # Compute and set CS base.
+    slli t4, t4, 4, dataSize=8
+    wrbase cs, t4, dataSize=8
+
+    # If IF or TF are set, we want to flip them.
+    limm t6, "(TFBit | IFBit)", dataSize=8
+    and t6, t6, t3, dataSize=8
+    wrflags t3, t6, dataSize=8
+
+    # Set the new RIP.
+    wrip t5, t0, dataSize=2
+
+    eret
+};
+"""
+)

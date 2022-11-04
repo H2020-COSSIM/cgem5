@@ -57,6 +57,7 @@
 #include "gpu-compute/gpu_compute_driver.hh"
 #include "gpu-compute/hsa_queue_entry.hh"
 #include "params/GPUCommandProcessor.hh"
+#include "sim/full_system.hh"
 
 namespace gem5
 {
@@ -76,7 +77,9 @@ class GPUCommandProcessor : public DmaVirtDevice
     GPUCommandProcessor(const Params &p);
 
     HSAPacketProcessor& hsaPacketProc();
+    RequestorID vramRequestorId();
 
+    void setGPUDevice(AMDGPUDevice *gpu_device);
     void setShader(Shader *shader);
     Shader* shader();
     GPUComputeDriver* driver();
@@ -128,6 +131,8 @@ class GPUCommandProcessor : public DmaVirtDevice
     Shader *_shader;
     GPUDispatcher &dispatcher;
     GPUComputeDriver *_driver;
+    AMDGPUDevice *gpuDevice;
+    VegaISA::Walker *walker;
 
     // Typedefing dmaRead and dmaWrite function pointer
     typedef void (DmaDevice::*DmaFnPtr)(Addr, int, Event*, uint8_t*, Tick);
@@ -264,7 +269,15 @@ class GPUCommandProcessor : public DmaVirtDevice
             auto cb = new DmaVirtCallback<uint64_t>(
                 [ = ] (const uint64_t &dma_buffer)
                 { WaitScratchDmaEvent(task, dma_buffer); } );
-            dmaReadVirt(value_addr, sizeof(Addr), cb, &cb->dmaBuffer);
+
+            /**
+             * Delay for a large amount of ticks to give the CPU time to
+             * setup the scratch space. The delay should be non-zero to since
+             * this method calls back itself and can cause an infinite loop
+             * in the event queue if the allocation is not completed by the
+             * first time this is called.
+             */
+            dmaReadVirt(value_addr, sizeof(Addr), cb, &cb->dmaBuffer, 1e9);
         }
     }
 };

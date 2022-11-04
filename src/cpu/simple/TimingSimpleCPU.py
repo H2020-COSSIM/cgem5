@@ -1,5 +1,4 @@
-# Copyright (c) 2007 The Regents of The University of Michigan
-# All rights reserved.
+# Copyright 2021 Google, Inc.
 #
 # Redistribution and use in source and binary forms, with or without
 # modification, are permitted provided that the following conditions are
@@ -24,19 +23,30 @@
 # (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-from m5.params import *
+import m5.defines
 
-from m5.objects.BaseSimpleCPU import BaseSimpleCPU
+arch_vars = [
+    "USE_ARM_ISA",
+    "USE_MIPS_ISA",
+    "USE_POWER_ISA",
+    "USE_RISCV_ISA",
+    "USE_SPARC_ISA",
+    "USE_X86_ISA",
+]
 
-class TimingSimpleCPU(BaseSimpleCPU):
-    type = 'TimingSimpleCPU'
-    cxx_header = "cpu/simple/timing.hh"
-    cxx_class = 'gem5::TimingSimpleCPU'
+enabled = list(filter(lambda var: m5.defines.buildEnv[var], arch_vars))
 
-    @classmethod
-    def memory_mode(cls):
-        return 'timing'
-
-    @classmethod
-    def support_take_over(cls):
-        return True
+if len(enabled) == 1:
+    arch = enabled[0]
+    if arch == "USE_ARM_ISA":
+        from m5.objects.ArmCPU import ArmTimingSimpleCPU as TimingSimpleCPU
+    elif arch == "USE_MIPS_ISA":
+        from m5.objects.MipsCPU import MipsTimingSimpleCPU as TimingSimpleCPU
+    elif arch == "USE_POWER_ISA":
+        from m5.objects.PowerCPU import PowerTimingSimpleCPU as TimingSimpleCPU
+    elif arch == "USE_RISCV_ISA":
+        from m5.objects.RiscvCPU import RiscvTimingSimpleCPU as TimingSimpleCPU
+    elif arch == "USE_SPARC_ISA":
+        from m5.objects.SparcCPU import SparcTimingSimpleCPU as TimingSimpleCPU
+    elif arch == "USE_X86_ISA":
+        from m5.objects.X86CPU import X86TimingSimpleCPU as TimingSimpleCPU

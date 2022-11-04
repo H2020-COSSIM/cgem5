@@ -47,7 +47,6 @@
 
 #include "base/statistics.hh"
 #include "base/types.hh"
-#include "config/the_isa.hh"
 #include "cpu/inst_seq.hh"
 #include "cpu/o3/dyn_inst_ptr.hh"
 #include "cpu/o3/limits.hh"
@@ -57,7 +56,7 @@
 namespace gem5
 {
 
-struct O3CPUParams;
+struct BaseO3CPUParams;
 
 namespace o3
 {
@@ -95,7 +94,7 @@ class ROB
      *  @param _cpu   The cpu object pointer.
      *  @param params The cpu params including several ROB-specific parameters.
      */
-    ROB(CPU *_cpu, const O3CPUParams &params);
+    ROB(CPU *_cpu, const BaseO3CPUParams &params);
 
     std::string name() const;
 

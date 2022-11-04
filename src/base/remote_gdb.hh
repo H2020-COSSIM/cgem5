@@ -171,8 +171,11 @@ class BaseRemoteGDB
     void replaceThreadContext(ThreadContext *_tc);
     bool selectThreadContext(ContextID id);
 
-    void trap(ContextID id, int signum);
-
+    void trap(ContextID id, int signum,const std::string& stopReason="");
+    bool sendMessage(std::string message);
+    //schedule a trap event with these properties
+    void scheduleTrapEvent(ContextID id,int type, int delta,
+      std::string stopReason);
     /** @} */ // end of api_remote_gdb
 
     template <class GDBStub, class ...Args>
@@ -237,6 +240,7 @@ class BaseRemoteGDB
 
     // Transfer data to/from GDB.
     uint8_t getbyte();
+    bool try_getbyte(uint8_t* c,int timeout=-1);//return true if successful
     void putbyte(uint8_t b);
 
     void recv(std::vector<char> &bp);
@@ -279,6 +283,7 @@ class BaseRemoteGDB
       protected:
         int _type;
         ContextID _id;
+        std::string _stopReason;
         BaseRemoteGDB *gdb;
 
       public:
@@ -286,16 +291,18 @@ class BaseRemoteGDB
         {}
 
         void type(int t) { _type = t; }
+        void stopReason(std::string s) {_stopReason = s; }
         void id(ContextID id) { _id = id; }
-        void process() { gdb->trap(_id, _type); }
+         void process() { gdb->trap(_id, _type,_stopReason); }
     } trapEvent;
 
     /*
      * The interface to the simulated system.
      */
-    // Machine memory.
-    bool read(Addr addr, size_t size, char *data);
-    bool write(Addr addr, size_t size, const char *data);
+    virtual bool readBlob(Addr vaddr, size_t size, char *data);
+    virtual bool writeBlob(Addr vaddr, size_t size, const char *data);
+    bool read(Addr vaddr, size_t size, char *data);
+    bool write(Addr vaddr, size_t size, const char *data);
 
     template <class T> T read(Addr addr);
     template <class T> void write(Addr addr, T data);
@@ -308,16 +315,23 @@ class BaseRemoteGDB
     void setSingleStep();
 
     /// Schedule an event which will be triggered "delta" instructions later.
-    void scheduleInstCommitEvent(Event *ev, int delta);
+    void scheduleInstCommitEvent(Event *ev, int delta,ThreadContext* _tc);
+    void scheduleInstCommitEvent(Event *ev, int delta){
+       scheduleInstCommitEvent(ev, delta,tc);
+    };
     /// Deschedule an instruction count based event.
     void descheduleInstCommitEvent(Event *ev);
 
     // Breakpoints.
-    void insertSoftBreak(Addr addr, size_t len);
-    void removeSoftBreak(Addr addr, size_t len);
-    void insertHardBreak(Addr addr, size_t len);
-    void removeHardBreak(Addr addr, size_t len);
+    void insertSoftBreak(Addr addr, size_t kind);
+    void removeSoftBreak(Addr addr, size_t kind);
+    void insertHardBreak(Addr addr, size_t kind);
+    void removeHardBreak(Addr addr, size_t kind);
 
+    void sendTPacket(int errnum, ContextID id,const std::string& stopReason);
+    void sendSPacket(int errnum);
+    //The OPacket allow to send string to be displayed by the remote GDB
+    void sendOPacket(const std::string message);
     /*
      * GDB commands.
      */
@@ -343,6 +357,30 @@ class BaseRemoteGDB
 
     static std::map<char, GdbCommand> commandMap;
 
+    struct GdbMultiLetterCommand
+    {
+      public:
+        struct Context
+        {
+            const GdbMultiLetterCommand *cmd;
+            std::string cmdTxt;
+            int type;
+            char *data;
+            int len;
+        };
+
+        typedef bool (BaseRemoteGDB::*Func)(Context &ctx);
+
+        const char * const name;
+        const Func func;
+
+        GdbMultiLetterCommand(const char *_name, Func _func) :
+          name(_name), func(_func) {}
+    };
+
+
+    static std::map<std::string, GdbMultiLetterCommand> multiLetterMap;
+
     bool cmdUnsupported(GdbCommand::Context &ctx);
 
     bool cmdSignal(GdbCommand::Context &ctx);
@@ -352,6 +390,7 @@ class BaseRemoteGDB
     bool cmdRegR(GdbCommand::Context &ctx);
     bool cmdRegW(GdbCommand::Context &ctx);
     bool cmdSetThread(GdbCommand::Context &ctx);
+    bool cmdIsThreadAlive(GdbCommand::Context &ctx);
     bool cmdMemR(GdbCommand::Context &ctx);
     bool cmdMemW(GdbCommand::Context &ctx);
     bool cmdQueryVar(GdbCommand::Context &ctx);
@@ -360,6 +399,13 @@ class BaseRemoteGDB
     bool cmdClrHwBkpt(GdbCommand::Context &ctx);
     bool cmdSetHwBkpt(GdbCommand::Context &ctx);
     bool cmdDumpPageTable(GdbCommand::Context &ctx);
+    bool cmdMultiLetter(GdbCommand::Context &ctx);
+
+    //Multi letter command
+    bool cmdMultiUnsupported(GdbMultiLetterCommand::Context &ctx);
+
+    bool cmdReplyEmpty(GdbMultiLetterCommand::Context &ctx);
+    bool cmdVKill(GdbMultiLetterCommand::Context &ctx);
 
     struct QuerySetCommand
     {
@@ -386,6 +432,8 @@ class BaseRemoteGDB
     void queryC(QuerySetCommand::Context &ctx);
     void querySupported(QuerySetCommand::Context &ctx);
     void queryXfer(QuerySetCommand::Context &ctx);
+    void querySymbol(QuerySetCommand::Context &ctx);
+    void queryAttached(QuerySetCommand::Context &ctx);
 
     size_t threadInfoIdx = 0;
     void queryFThreadInfo(QuerySetCommand::Context &ctx);
@@ -401,8 +449,10 @@ class BaseRemoteGDB
     void encodeXferResponse(const std::string &unencoded,
         std::string &encoded, size_t offset, size_t unencoded_length) const;
 
-    // To be implemented by subclasses.
-    virtual bool checkBpLen(size_t len);
+    // checkBpKind checks if a kind of breakpoint is legal. This function should
+    // be implemented by subclasses by arch. The "kind" is considered to be
+    // breakpoint size in some arch.
+    virtual bool checkBpKind(size_t kind);
 
     virtual BaseGdbRegCache *gdbRegs() = 0;
 

@@ -285,14 +285,14 @@ let {{
     buildDataInst("and", "Dest = resTemp = Op1 & secondOp;")
     buildDataInst("eor", "Dest = resTemp = Op1 ^ secondOp;")
     buildDataInst("sub", "Dest = resTemp = Op1 - secondOp;", "sub",
-                  isBranch = "dest == INTREG_PC")
+                  isBranch = "dest == int_reg::Pc")
     buildDataInst("rsb", "Dest = resTemp = secondOp - Op1;", "rsb")
     buildDataInst("add", "Dest = resTemp = Op1 + secondOp;", "add",
-                  isBranch = "dest == INTREG_PC")
+                  isBranch = "dest == int_reg::Pc")
     buildImmDataInst("adr", '''
                                Dest = resTemp = (PC & ~0x3) +
                                (op1 ? secondOp : -secondOp);
-                            ''', isBranch = "dest == INTREG_PC")
+                            ''', isBranch = "dest == int_reg::Pc")
     buildDataInst("adc", "Dest = resTemp = Op1 + secondOp + %s;" % oldC, "add")
     buildDataInst("sbc", "Dest = resTemp = Op1 - secondOp - !%s;" % oldC, "sub")
     buildDataInst("rsc", "Dest = resTemp = secondOp - Op1 - !%s;" % oldC, "rsb")
@@ -303,7 +303,8 @@ let {{
     buildDataInst("orr", "Dest = resTemp = Op1 | secondOp;")
     buildDataInst("orn", "Dest = resTemp = Op1 | ~secondOp;", aiw = False)
     buildDataInst("mov", "Dest = resTemp = secondOp;", regRegAiw = False,
-                  isRasPop = "op2 == INTREG_LR", isBranch = "dest == INTREG_PC")
+                  isRasPop = "op2 == int_reg::Lr",
+                  isBranch = "dest == int_reg::Pc")
     buildDataInst("bic", "Dest = resTemp = Op1 & ~secondOp;")
     buildDataInst("mvn", "Dest = resTemp = ~secondOp;")
     buildDataInst("movt",
@@ -341,8 +342,9 @@ let {{
         ''', flagType="none", buildCc=False)
     buildRegDataInst("qdadd", '''
             int32_t midRes;
-            resTemp = saturateOp<32>(midRes, Op2_sw, Op2_sw) |
-                      saturateOp<32>(midRes, Op1_sw, midRes);
+            const bool res0 = saturateOp<32>(midRes, Op2_sw, Op2_sw);
+            const bool res1 = saturateOp<32>(midRes, Op1_sw, midRes);
+            resTemp = (res0 || res1) ? 1 : 0;
             Dest = midRes;
         ''', flagType="saturate", buildNonCc=False)
     buildRegDataInst("qsub", '''
@@ -376,8 +378,9 @@ let {{
         ''', flagType="none", buildCc=False)
     buildRegDataInst("qdsub", '''
             int32_t midRes;
-            resTemp = saturateOp<32>(midRes, Op2_sw, Op2_sw) |
-                      saturateOp<32>(midRes, Op1_sw, midRes, true);
+            const bool res0 = saturateOp<32>(midRes, Op2_sw, Op2_sw);
+            const bool res1 = saturateOp<32>(midRes, Op1_sw, midRes, true);
+            resTemp = (res0 || res1) ? 1 : 0;
             Dest = midRes;
         ''', flagType="saturate", buildNonCc=False)
     buildRegDataInst("qasx", '''

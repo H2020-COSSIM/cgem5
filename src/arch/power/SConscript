@@ -30,6 +30,9 @@
 
 Import('*')
 
+if env['USE_POWER_ISA']:
+    env.TagImplies('power isa', 'gem5 lib')
+
 Source('decoder.cc', tags='power isa')
 Source('faults.cc', tags='power isa')
 Source('insts/branch.cc', tags='power isa')
@@ -54,6 +57,8 @@ SimObject('PowerMMU.py', sim_objects=['PowerMMU'], tags='power isa')
 SimObject('PowerSeWorkload.py', sim_objects=[
     'PowerSEWorkload', 'PowerEmuLinux'], tags='power isa')
 SimObject('PowerTLB.py', sim_objects=['PowerTLB'], tags='power isa')
+
+SimObject('PowerCPU.py', sim_objects=[], tags='power isa')
 
 DebugFlag('Power', tags='power isa')
 

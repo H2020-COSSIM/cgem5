@@ -42,7 +42,7 @@
 def template PanicExecute {{
     Fault
     %(class_name)s::execute(ExecContext *xc,
-                            Trace::InstRecord *traceData) const
+                            trace::InstRecord *traceData) const
     {
         panic("Execute function executed when it shouldn't be!\n");
         return NoFault;
@@ -52,7 +52,7 @@ def template PanicExecute {{
 def template PanicInitiateAcc {{
     Fault
     %(class_name)s::initiateAcc(ExecContext *xc,
-                                Trace::InstRecord *traceData) const
+                                trace::InstRecord *traceData) const
     {
         panic("InitiateAcc function executed when it shouldn't be!\n");
         return NoFault;
@@ -62,7 +62,7 @@ def template PanicInitiateAcc {{
 def template PanicCompleteAcc {{
     Fault
     %(class_name)s::completeAcc(PacketPtr pkt, ExecContext *xc,
-                                Trace::InstRecord *traceData) const
+                                trace::InstRecord *traceData) const
     {
         panic("CompleteAcc function executed when it shouldn't be!\n");
         return NoFault;
@@ -73,7 +73,7 @@ def template PanicCompleteAcc {{
 def template SwapExecute {{
     Fault
     %(class_name)s::execute(ExecContext *xc,
-                            Trace::InstRecord *traceData) const
+                            trace::InstRecord *traceData) const
     {
         Addr EA;
         Fault fault = NoFault;
@@ -109,7 +109,7 @@ def template SwapExecute {{
 def template SwapInitiateAcc {{
     Fault
     %(class_name)s::initiateAcc(ExecContext *xc,
-                                Trace::InstRecord *traceData) const
+                                trace::InstRecord *traceData) const
     {
         Addr EA;
         Fault fault = NoFault;
@@ -137,7 +137,7 @@ def template SwapInitiateAcc {{
 def template SwapCompleteAcc {{
     Fault
     %(class_name)s::completeAcc(PacketPtr pkt, ExecContext *xc,
-                                Trace::InstRecord *traceData) const
+                                trace::InstRecord *traceData) const
     {
         Fault fault = NoFault;
 
@@ -163,7 +163,7 @@ def template SwapCompleteAcc {{
 def template LoadExecute {{
     Fault
     %(class_name)s::execute(ExecContext *xc,
-                            Trace::InstRecord *traceData) const
+                            trace::InstRecord *traceData) const
     {
         Addr EA;
         Fault fault = NoFault;
@@ -194,7 +194,7 @@ def template NeonLoadExecute {{
     template <class Element>
     Fault
     %(class_name)s<Element>::execute(
-            ExecContext *xc, Trace::InstRecord *traceData) const
+            ExecContext *xc, trace::InstRecord *traceData) const
     {
         Addr EA;
         Fault fault = NoFault;
@@ -230,7 +230,7 @@ def template NeonLoadExecute {{
 def template StoreExecute {{
     Fault
     %(class_name)s::execute(ExecContext *xc,
-                            Trace::InstRecord *traceData) const
+                            trace::InstRecord *traceData) const
     {
         Addr EA;
         Fault fault = NoFault;
@@ -264,7 +264,7 @@ def template NeonStoreExecute {{
     template <class Element>
     Fault
     %(class_name)s<Element>::execute(
-            ExecContext *xc, Trace::InstRecord *traceData) const
+            ExecContext *xc, trace::InstRecord *traceData) const
     {
         Addr EA;
         Fault fault = NoFault;
@@ -303,7 +303,7 @@ def template NeonStoreExecute {{
 def template StoreExExecute {{
     Fault
     %(class_name)s::execute(ExecContext *xc,
-                            Trace::InstRecord *traceData) const
+                            trace::InstRecord *traceData) const
     {
         Addr EA;
         Fault fault = NoFault;
@@ -342,7 +342,7 @@ def template StoreExExecute {{
 def template StoreExInitiateAcc {{
     Fault
     %(class_name)s::initiateAcc(ExecContext *xc,
-                                Trace::InstRecord *traceData) const
+                                trace::InstRecord *traceData) const
     {
         Addr EA;
         Fault fault = NoFault;
@@ -371,7 +371,7 @@ def template StoreExInitiateAcc {{
 def template StoreInitiateAcc {{
     Fault
     %(class_name)s::initiateAcc(ExecContext *xc,
-                                Trace::InstRecord *traceData) const
+                                trace::InstRecord *traceData) const
     {
         Addr EA;
         Fault fault = NoFault;
@@ -401,7 +401,7 @@ def template NeonStoreInitiateAcc {{
     template <class Element>
     Fault
     %(class_name)s<Element>::initiateAcc(
-            ExecContext *xc, Trace::InstRecord *traceData) const
+            ExecContext *xc, trace::InstRecord *traceData) const
     {
         Addr EA;
         Fault fault = NoFault;
@@ -434,7 +434,7 @@ def template NeonStoreInitiateAcc {{
 def template LoadInitiateAcc {{
     Fault
     %(class_name)s::initiateAcc(ExecContext *xc,
-                                Trace::InstRecord *traceData) const
+                                trace::InstRecord *traceData) const
     {
         Addr EA;
         Fault fault = NoFault;
@@ -460,7 +460,7 @@ def template NeonLoadInitiateAcc {{
     template <class Element>
     Fault
     %(class_name)s<Element>::initiateAcc(
-            ExecContext *xc, Trace::InstRecord *traceData) const
+            ExecContext *xc, trace::InstRecord *traceData) const
     {
         Addr EA;
         Fault fault = NoFault;
@@ -487,7 +487,7 @@ def template NeonLoadInitiateAcc {{
 def template LoadCompleteAcc {{
     Fault
     %(class_name)s::completeAcc(PacketPtr pkt, ExecContext *xc,
-                                Trace::InstRecord *traceData) const
+                                trace::InstRecord *traceData) const
     {
         Fault fault = NoFault;
 
@@ -515,7 +515,7 @@ def template NeonLoadCompleteAcc {{
     template <class Element>
     Fault
     %(class_name)s<Element>::completeAcc(
-            PacketPtr pkt, ExecContext *xc, Trace::InstRecord *traceData) const
+            PacketPtr pkt, ExecContext *xc, trace::InstRecord *traceData) const
     {
         Fault fault = NoFault;
 
@@ -543,7 +543,7 @@ def template NeonLoadCompleteAcc {{
 def template StoreCompleteAcc {{
     Fault
     %(class_name)s::completeAcc(PacketPtr pkt, ExecContext *xc,
-                                Trace::InstRecord *traceData) const
+                                trace::InstRecord *traceData) const
     {
         return NoFault;
     }
@@ -553,7 +553,7 @@ def template NeonStoreCompleteAcc {{
     template <class Element>
     Fault
     %(class_name)s<Element>::completeAcc(
-            PacketPtr pkt, ExecContext *xc, Trace::InstRecord *traceData) const
+            PacketPtr pkt, ExecContext *xc, trace::InstRecord *traceData) const
     {
         return NoFault;
     }
@@ -562,7 +562,7 @@ def template NeonStoreCompleteAcc {{
 def template StoreExCompleteAcc {{
     Fault
     %(class_name)s::completeAcc(PacketPtr pkt, ExecContext *xc,
-                                Trace::InstRecord *traceData) const
+                                trace::InstRecord *traceData) const
     {
         Fault fault = NoFault;
 
@@ -596,10 +596,10 @@ def template RfeDeclare {{
         %(class_name)s(ExtMachInst machInst,
                 uint32_t _base, int _mode, bool _wb);
 
-        Fault execute(ExecContext *, Trace::InstRecord *) const override;
-        Fault initiateAcc(ExecContext *, Trace::InstRecord *) const override;
+        Fault execute(ExecContext *, trace::InstRecord *) const override;
+        Fault initiateAcc(ExecContext *, trace::InstRecord *) const override;
         Fault completeAcc(PacketPtr, ExecContext *,
-                          Trace::InstRecord *) const override;
+                          trace::InstRecord *) const override;
     };
 }};
 
@@ -617,10 +617,10 @@ def template SrsDeclare {{
         %(class_name)s(ExtMachInst machInst,
                 uint32_t _regMode, int _mode, bool _wb);
 
-        Fault execute(ExecContext *, Trace::InstRecord *) const override;
-        Fault initiateAcc(ExecContext *, Trace::InstRecord *) const override;
+        Fault execute(ExecContext *, trace::InstRecord *) const override;
+        Fault initiateAcc(ExecContext *, trace::InstRecord *) const override;
         Fault completeAcc(PacketPtr, ExecContext *,
-                          Trace::InstRecord *) const override;
+                          trace::InstRecord *) const override;
     };
 }};
 
@@ -638,10 +638,10 @@ def template SwapDeclare {{
         %(class_name)s(ExtMachInst machInst,
                 uint32_t _dest, uint32_t _op1, uint32_t _base);
 
-        Fault execute(ExecContext *, Trace::InstRecord *) const override;
-        Fault initiateAcc(ExecContext *, Trace::InstRecord *) const override;
+        Fault execute(ExecContext *, trace::InstRecord *) const override;
+        Fault initiateAcc(ExecContext *, trace::InstRecord *) const override;
         Fault completeAcc(PacketPtr, ExecContext *,
-                          Trace::InstRecord *) const override;
+                          trace::InstRecord *) const override;
     };
 }};
 
@@ -660,10 +660,10 @@ def template LoadStoreDImmDeclare {{
                 uint32_t _dest, uint32_t _dest2,
                 uint32_t _base, bool _add, int32_t _imm);
 
-        Fault execute(ExecContext *, Trace::InstRecord *) const override;
-        Fault initiateAcc(ExecContext *, Trace::InstRecord *) const override;
+        Fault execute(ExecContext *, trace::InstRecord *) const override;
+        Fault initiateAcc(ExecContext *, trace::InstRecord *) const override;
         Fault completeAcc(PacketPtr, ExecContext *,
-                          Trace::InstRecord *) const override;
+                          trace::InstRecord *) const override;
     };
 }};
 
@@ -682,10 +682,10 @@ def template StoreExDImmDeclare {{
                 uint32_t _result, uint32_t _dest, uint32_t _dest2,
                 uint32_t _base, bool _add, int32_t _imm);
 
-        Fault execute(ExecContext *, Trace::InstRecord *) const override;
-        Fault initiateAcc(ExecContext *, Trace::InstRecord *) const override;
+        Fault execute(ExecContext *, trace::InstRecord *) const override;
+        Fault initiateAcc(ExecContext *, trace::InstRecord *) const override;
         Fault completeAcc(PacketPtr, ExecContext *,
-                          Trace::InstRecord *) const override;
+                          trace::InstRecord *) const override;
     };
 }};
 
@@ -703,10 +703,10 @@ def template LoadStoreImmDeclare {{
         %(class_name)s(ExtMachInst machInst,
                 uint32_t _dest, uint32_t _base, bool _add, int32_t _imm);
 
-        Fault execute(ExecContext *, Trace::InstRecord *) const override;
-        Fault initiateAcc(ExecContext *, Trace::InstRecord *) const override;
+        Fault execute(ExecContext *, trace::InstRecord *) const override;
+        Fault initiateAcc(ExecContext *, trace::InstRecord *) const override;
         Fault completeAcc(PacketPtr, ExecContext *,
-                          Trace::InstRecord *) const override;
+                          trace::InstRecord *) const override;
 
         void
         annotateFault(ArmISA::ArmFault *fault) override
@@ -731,10 +731,10 @@ def template StoreExImmDeclare {{
                 uint32_t _result, uint32_t _dest, uint32_t _base,
                 bool _add, int32_t _imm);
 
-        Fault execute(ExecContext *, Trace::InstRecord *) const override;
-        Fault initiateAcc(ExecContext *, Trace::InstRecord *) const override;
+        Fault execute(ExecContext *, trace::InstRecord *) const override;
+        Fault initiateAcc(ExecContext *, trace::InstRecord *) const override;
         Fault completeAcc(PacketPtr, ExecContext *,
-                          Trace::InstRecord *) const override;
+                          trace::InstRecord *) const override;
     };
 }};
 
@@ -755,10 +755,10 @@ def template StoreDRegDeclare {{
                 int32_t _shiftAmt, uint32_t _shiftType,
                 uint32_t _index);
 
-        Fault execute(ExecContext *, Trace::InstRecord *) const override;
-        Fault initiateAcc(ExecContext *, Trace::InstRecord *) const override;
+        Fault execute(ExecContext *, trace::InstRecord *) const override;
+        Fault initiateAcc(ExecContext *, trace::InstRecord *) const override;
         Fault completeAcc(PacketPtr, ExecContext *,
-                          Trace::InstRecord *) const override;
+                          trace::InstRecord *) const override;
     };
 }};
 
@@ -778,10 +778,10 @@ def template StoreRegDeclare {{
                 int32_t _shiftAmt, uint32_t _shiftType,
                 uint32_t _index);
 
-        Fault execute(ExecContext *, Trace::InstRecord *) const override;
-        Fault initiateAcc(ExecContext *, Trace::InstRecord *) const override;
+        Fault execute(ExecContext *, trace::InstRecord *) const override;
+        Fault initiateAcc(ExecContext *, trace::InstRecord *) const override;
         Fault completeAcc(PacketPtr, ExecContext *,
-                          Trace::InstRecord *) const override;
+                          trace::InstRecord *) const override;
 
         void
         annotateFault(ArmISA::ArmFault *fault) override
@@ -808,10 +808,10 @@ def template LoadDRegDeclare {{
                 int32_t _shiftAmt, uint32_t _shiftType,
                 uint32_t _index);
 
-        Fault execute(ExecContext *, Trace::InstRecord *) const override;
-        Fault initiateAcc(ExecContext *, Trace::InstRecord *) const override;
+        Fault execute(ExecContext *, trace::InstRecord *) const override;
+        Fault initiateAcc(ExecContext *, trace::InstRecord *) const override;
         Fault completeAcc(PacketPtr, ExecContext *,
-                          Trace::InstRecord *) const override;
+                          trace::InstRecord *) const override;
     };
 }};
 
@@ -831,10 +831,10 @@ def template LoadRegDeclare {{
                 int32_t _shiftAmt, uint32_t _shiftType,
                 uint32_t _index);
 
-        Fault execute(ExecContext *, Trace::InstRecord *) const override;
-        Fault initiateAcc(ExecContext *, Trace::InstRecord *) const override;
+        Fault execute(ExecContext *, trace::InstRecord *) const override;
+        Fault initiateAcc(ExecContext *, trace::InstRecord *) const override;
         Fault completeAcc(PacketPtr, ExecContext *,
-                          Trace::InstRecord *) const override;
+                          trace::InstRecord *) const override;
 
         void
         annotateFault(ArmISA::ArmFault *fault) override
@@ -858,10 +858,10 @@ def template LoadImmDeclare {{
         %(class_name)s(ExtMachInst machInst,
                 uint32_t _dest, uint32_t _base, bool _add, int32_t _imm);
 
-        Fault execute(ExecContext *, Trace::InstRecord *) const override;
-        Fault initiateAcc(ExecContext *, Trace::InstRecord *) const override;
+        Fault execute(ExecContext *, trace::InstRecord *) const override;
+        Fault initiateAcc(ExecContext *, trace::InstRecord *) const override;
         Fault completeAcc(PacketPtr, ExecContext *,
-                          Trace::InstRecord *) const override;
+                          trace::InstRecord *) const override;
 
         void
         annotateFault(ArmISA::ArmFault *fault) override
@@ -875,7 +875,7 @@ def template RfeConstructor {{
     %(class_name)s::%(class_name)s(ExtMachInst machInst,
             uint32_t _base, int _mode, bool _wb) :
         %(base_class)s("%(mnemonic)s", machInst, %(op_class)s,
-                       (IntRegIndex)_base, (AddrMode)_mode, _wb)
+                       (RegIndex)_base, (AddrMode)_mode, _wb)
     {
         %(set_reg_idx_arr)s;
         %(constructor)s;
@@ -931,7 +931,7 @@ def template SwapConstructor {{
     %(class_name)s::%(class_name)s(ExtMachInst machInst,
             uint32_t _dest, uint32_t _op1, uint32_t _base) :
          %(base_class)s("%(mnemonic)s", machInst, %(op_class)s,
-                 (IntRegIndex)_dest, (IntRegIndex)_op1, (IntRegIndex)_base)
+                 (RegIndex)_dest, (RegIndex)_op1, (RegIndex)_base)
     {
         %(set_reg_idx_arr)s;
         %(constructor)s;
@@ -948,8 +948,8 @@ def template LoadStoreDImmConstructor {{
             uint32_t _dest, uint32_t _dest2,
             uint32_t _base, bool _add, int32_t _imm) :
          %(base_class)s("%(mnemonic)s", machInst, %(op_class)s,
-                 (IntRegIndex)_dest, (IntRegIndex)_dest2,
-                 (IntRegIndex)_base, _add, _imm)
+                 (RegIndex)_dest, (RegIndex)_dest2,
+                 (RegIndex)_base, _add, _imm)
     {
         %(set_reg_idx_arr)s;
         %(constructor)s;
@@ -975,8 +975,8 @@ def template StoreExDImmConstructor {{
             uint32_t _result, uint32_t _dest, uint32_t _dest2,
             uint32_t _base, bool _add, int32_t _imm) :
          %(base_class)s("%(mnemonic)s", machInst, %(op_class)s,
-                 (IntRegIndex)_result, (IntRegIndex)_dest, (IntRegIndex)_dest2,
-                 (IntRegIndex)_base, _add, _imm)
+                 (RegIndex)_result, (RegIndex)_dest, (RegIndex)_dest2,
+                 (RegIndex)_base, _add, _imm)
     {
         %(set_reg_idx_arr)s;
         %(constructor)s;
@@ -1002,7 +1002,7 @@ def template LoadStoreImmConstructor {{
     %(class_name)s::%(class_name)s(ExtMachInst machInst,
             uint32_t _dest, uint32_t _base, bool _add, int32_t _imm) :
          %(base_class)s("%(mnemonic)s", machInst, %(op_class)s,
-                 (IntRegIndex)_dest, (IntRegIndex)_base, _add, _imm)
+                 (RegIndex)_dest, (RegIndex)_base, _add, _imm)
     {
         %(set_reg_idx_arr)s;
         %(constructor)s;
@@ -1028,8 +1028,8 @@ def template StoreExImmConstructor {{
             uint32_t _result, uint32_t _dest, uint32_t _base,
             bool _add, int32_t _imm) :
          %(base_class)s("%(mnemonic)s", machInst, %(op_class)s,
-                 (IntRegIndex)_result, (IntRegIndex)_dest,
-                 (IntRegIndex)_base, _add, _imm)
+                 (RegIndex)_result, (RegIndex)_dest,
+                 (RegIndex)_base, _add, _imm)
     {
         %(set_reg_idx_arr)s;
         %(constructor)s;
@@ -1056,10 +1056,10 @@ def template StoreDRegConstructor {{
             uint32_t _dest, uint32_t _dest2, uint32_t _base, bool _add,
             int32_t _shiftAmt, uint32_t _shiftType, uint32_t _index) :
          %(base_class)s("%(mnemonic)s", machInst, %(op_class)s,
-                 (IntRegIndex)_dest, (IntRegIndex)_dest2,
-                 (IntRegIndex)_base, _add,
+                 (RegIndex)_dest, (RegIndex)_dest2,
+                 (RegIndex)_base, _add,
                  _shiftAmt, (ArmShiftType)_shiftType,
-                 (IntRegIndex)_index)
+                 (RegIndex)_index)
     {
         %(set_reg_idx_arr)s;
         %(constructor)s;
@@ -1086,9 +1086,9 @@ def template StoreRegConstructor {{
             uint32_t _dest, uint32_t _base, bool _add,
             int32_t _shiftAmt, uint32_t _shiftType, uint32_t _index) :
          %(base_class)s("%(mnemonic)s", machInst, %(op_class)s,
-                 (IntRegIndex)_dest, (IntRegIndex)_base, _add,
+                 (RegIndex)_dest, (RegIndex)_base, _add,
                  _shiftAmt, (ArmShiftType)_shiftType,
-                 (IntRegIndex)_index)
+                 (RegIndex)_index)
     {
         %(set_reg_idx_arr)s;
         %(constructor)s;
@@ -1115,10 +1115,10 @@ def template LoadDRegConstructor {{
             uint32_t _dest, uint32_t _dest2, uint32_t _base, bool _add,
             int32_t _shiftAmt, uint32_t _shiftType, uint32_t _index) :
          %(base_class)s("%(mnemonic)s", machInst, %(op_class)s,
-                 (IntRegIndex)_dest, (IntRegIndex)_dest2,
-                 (IntRegIndex)_base, _add,
+                 (RegIndex)_dest, (RegIndex)_dest2,
+                 (RegIndex)_base, _add,
                  _shiftAmt, (ArmShiftType)_shiftType,
-                 (IntRegIndex)_index)
+                 (RegIndex)_index)
     {
         %(set_reg_idx_arr)s;
         %(constructor)s;
@@ -1131,8 +1131,8 @@ def template LoadDRegConstructor {{
         assert(numMicroops >= 2);
         uops = new StaticInstPtr[numMicroops];
         if ((_dest == _index) || (_dest2 == _index)) {
-            IntRegIndex wbIndexReg = INTREG_UREG0;
-            uops[0] = new MicroUopRegMov(machInst, INTREG_UREG0, _index);
+            RegIndex wbIndexReg = int_reg::Ureg0;
+            uops[0] = new MicroUopRegMov(machInst, int_reg::Ureg0, _index);
             uops[0]->setDelayedCommit();
             uops[0]->setFirstMicroop();
             uops[1] = new %(acc_name)s(machInst, _dest, _dest2, _base, _add,
@@ -1141,7 +1141,7 @@ def template LoadDRegConstructor {{
             uops[2] = new %(wb_decl)s;
             uops[2]->setLastMicroop();
         } else {
-            IntRegIndex wbIndexReg = index;
+            RegIndex wbIndexReg = index;
             uops[0] = new %(acc_name)s(machInst, _dest, _dest2, _base, _add,
                                        _shiftAmt, _shiftType, _index);
             uops[0]->setDelayedCommit();
@@ -1158,9 +1158,9 @@ def template LoadRegConstructor {{
             uint32_t _dest, uint32_t _base, bool _add,
             int32_t _shiftAmt, uint32_t _shiftType, uint32_t _index) :
          %(base_class)s("%(mnemonic)s", machInst, %(op_class)s,
-                 (IntRegIndex)_dest, (IntRegIndex)_base, _add,
+                 (RegIndex)_dest, (RegIndex)_base, _add,
                  _shiftAmt, (ArmShiftType)_shiftType,
-                 (IntRegIndex)_index)
+                 (RegIndex)_index)
     {
         %(set_reg_idx_arr)s;
         %(constructor)s;
@@ -1174,15 +1174,16 @@ def template LoadRegConstructor {{
 #if %(use_uops)d
         assert(numMicroops >= 2);
         uops = new StaticInstPtr[numMicroops];
-        if (_dest == INTREG_PC && !isFloating() && !isVector()) {
-            IntRegIndex wbIndexReg = index;
-            uops[0] = new %(acc_name)s(machInst, INTREG_UREG0, _base, _add,
+        if (_dest == int_reg::Pc && !isFloating() && !isVector()) {
+            RegIndex wbIndexReg = index;
+            uops[0] = new %(acc_name)s(machInst, int_reg::Ureg0, _base, _add,
                                        _shiftAmt, _shiftType, _index);
             uops[0]->setDelayedCommit();
             uops[0]->setFirstMicroop();
             uops[1] = new %(wb_decl)s;
             uops[1]->setDelayedCommit();
-            uops[2] = new MicroUopRegMov(machInst, INTREG_PC, INTREG_UREG0);
+            uops[2] = new MicroUopRegMov(machInst, int_reg::Pc,
+                                         int_reg::Ureg0);
             uops[2]->setFlag(StaticInst::IsControl);
             uops[2]->setFlag(StaticInst::IsIndirectControl);
             if (conditional)
@@ -1191,8 +1192,8 @@ def template LoadRegConstructor {{
                 uops[2]->setFlag(StaticInst::IsUncondControl);
             uops[2]->setLastMicroop();
         } else if(_dest == _index) {
-            IntRegIndex wbIndexReg = INTREG_UREG0;
-            uops[0] = new MicroUopRegMov(machInst, INTREG_UREG0, _index);
+            RegIndex wbIndexReg = int_reg::Ureg0;
+            uops[0] = new MicroUopRegMov(machInst, int_reg::Ureg0, _index);
             uops[0]->setDelayedCommit();
             uops[0]->setFirstMicroop();
             uops[1] = new %(acc_name)s(machInst, _dest, _base, _add,
@@ -1201,7 +1202,7 @@ def template LoadRegConstructor {{
             uops[2] = new %(wb_decl)s;
             uops[2]->setLastMicroop();
         } else {
-            IntRegIndex wbIndexReg = index;
+            RegIndex wbIndexReg = index;
             uops[0] = new %(acc_name)s(machInst, _dest, _base, _add,
                                       _shiftAmt, _shiftType, _index);
             uops[0]->setDelayedCommit();
@@ -1211,7 +1212,7 @@ def template LoadRegConstructor {{
 
         }
 #else
-        if (_dest == INTREG_PC && !isFloating() && !isVector()) {
+        if (_dest == int_reg::Pc && !isFloating() && !isVector()) {
             flags[IsControl] = true;
             flags[IsIndirectControl] = true;
             if (conditional)
@@ -1227,7 +1228,7 @@ def template LoadImmConstructor {{
     %(class_name)s::%(class_name)s(ExtMachInst machInst,
             uint32_t _dest, uint32_t _base, bool _add, int32_t _imm) :
          %(base_class)s("%(mnemonic)s", machInst, %(op_class)s,
-                 (IntRegIndex)_dest, (IntRegIndex)_base, _add, _imm)
+                 (RegIndex)_dest, (RegIndex)_base, _add, _imm)
     {
         %(set_reg_idx_arr)s;
         %(constructor)s;
@@ -1241,14 +1242,15 @@ def template LoadImmConstructor {{
 #if %(use_uops)d
         assert(numMicroops >= 2);
         uops = new StaticInstPtr[numMicroops];
-        if (_dest == INTREG_PC && !isFloating() && !isVector()) {
-            uops[0] = new %(acc_name)s(machInst, INTREG_UREG0, _base, _add,
+        if (_dest == int_reg::Pc && !isFloating() && !isVector()) {
+            uops[0] = new %(acc_name)s(machInst, int_reg::Ureg0, _base, _add,
                                    _imm);
             uops[0]->setDelayedCommit();
             uops[0]->setFirstMicroop();
             uops[1] = new %(wb_decl)s;
             uops[1]->setDelayedCommit();
-            uops[2] = new MicroUopRegMov(machInst, INTREG_PC, INTREG_UREG0);
+            uops[2] = new MicroUopRegMov(
+                    machInst, int_reg::Pc, int_reg::Ureg0);
             uops[2]->setFlag(StaticInst::IsControl);
             uops[2]->setFlag(StaticInst::IsIndirectControl);
             /* Also set flags on the macroop so that pre-microop decomposition
@@ -1262,7 +1264,7 @@ def template LoadImmConstructor {{
                 uops[2]->setFlag(StaticInst::IsUncondControl);
                 setFlag(StaticInst::IsUncondControl);
             }
-            if (_base == INTREG_SP && _add && _imm == 4 && %(is_ras_pop)s) {
+            if (_base == int_reg::Sp && _add && _imm == 4 && %(is_ras_pop)s) {
                 uops[2]->setFlag(StaticInst::IsReturn);
                 setFlag(StaticInst::IsReturn);
             }
@@ -1275,7 +1277,7 @@ def template LoadImmConstructor {{
             uops[1]->setLastMicroop();
         }
 #else
-        if (_dest == INTREG_PC && !isFloating() && !isVector()) {
+        if (_dest == int_reg::Pc && !isFloating() && !isVector()) {
             flags[IsControl] = true;
             flags[IsIndirectControl] = true;
             if (conditional)
@@ -1286,4 +1288,3 @@ def template LoadImmConstructor {{
 #endif
     }
 }};
-

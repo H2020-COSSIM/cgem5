@@ -34,6 +34,7 @@
 #include <utility>
 
 #include "arch/arm/regs/int.hh"
+#include "arch/arm/regs/vec.hh"
 #include "arch/arm/utility.hh"
 #include "base/intmath.hh"
 #include "cpu/thread_context.hh"
@@ -64,7 +65,7 @@ struct Aapcs32
         Addr retAddr=0;
 
         explicit State(const ThreadContext *tc) :
-            nsaa(tc->readIntReg(ArmISA::INTREG_SPX))
+            nsaa(tc->getReg(ArmISA::int_reg::Spx))
         {}
     };
 };
@@ -150,7 +151,7 @@ struct Result<Aapcs32, Integer, typename std::enable_if_t<
     {
         uint32_t val = std::is_signed_v<Integer> ?
                 sext<sizeof(Integer) * 8>(i) : i;
-        tc->setIntReg(ArmISA::INTREG_R0, val);
+        tc->setReg(ArmISA::int_reg::R0, val);
     }
 };
 
@@ -161,7 +162,7 @@ struct Result<Aapcs32, Integer, typename std::enable_if_t<
     static void
     store(ThreadContext *tc, const Integer &i)
     {
-        tc->setIntReg(ArmISA::INTREG_R0, (uint32_t)i);
+        tc->setReg(ArmISA::int_reg::R0, (uint32_t)i);
     }
 };
 
@@ -173,11 +174,11 @@ struct Result<Aapcs32, Integer, typename std::enable_if_t<
     store(ThreadContext *tc, const Integer &i)
     {
         if (ArmISA::byteOrder(tc) == ByteOrder::little) {
-            tc->setIntReg(ArmISA::INTREG_R0, (uint32_t)(i >> 0));
-            tc->setIntReg(ArmISA::INTREG_R1, (uint32_t)(i >> 32));
+            tc->setReg(ArmISA::int_reg::R0, (uint32_t)(i >> 0));
+            tc->setReg(ArmISA::int_reg::R1, (uint32_t)(i >> 32));
         } else {
-            tc->setIntReg(ArmISA::INTREG_R0, (uint32_t)(i >> 32));
-            tc->setIntReg(ArmISA::INTREG_R1, (uint32_t)(i >> 0));
+            tc->setReg(ArmISA::int_reg::R0, (uint32_t)(i >> 32));
+            tc->setReg(ArmISA::int_reg::R1, (uint32_t)(i >> 0));
         }
     }
 };
@@ -191,7 +192,7 @@ struct Argument<Aapcs32, Integer, typename std::enable_if_t<
     get(ThreadContext *tc, Aapcs32::State &state)
     {
         if (state.ncrn <= state.MAX_CRN) {
-            return tc->readIntReg(state.ncrn++);
+            return tc->getReg(ArmISA::intRegClass[state.ncrn++]);
         }
 
         // Max out the ncrn since we effectively exhausted it.
@@ -216,11 +217,13 @@ struct Argument<Aapcs32, Integer, typename std::enable_if_t<
                 state.ncrn + 1 <= state.MAX_CRN) {
             Integer low, high;
             if (ArmISA::byteOrder(tc) == ByteOrder::little) {
-                low = tc->readIntReg(state.ncrn++) & mask(32);
-                high = tc->readIntReg(state.ncrn++) & mask(32);
+                low = tc->getReg(ArmISA::intRegClass[state.ncrn++]) & mask(32);
+                high = tc->getReg(ArmISA::intRegClass[state.ncrn++]) &
+                    mask(32);
             } else {
-                high = tc->readIntReg(state.ncrn++) & mask(32);
-                low = tc->readIntReg(state.ncrn++) & mask(32);
+                high = tc->getReg(ArmISA::intRegClass[state.ncrn++]) &
+                    mask(32);
+                low = tc->getReg(ArmISA::intRegClass[state.ncrn++]) & mask(32);
             }
             return low | (high << 32);
         }
@@ -284,7 +287,7 @@ struct Result<Aapcs32, Composite, typename std::enable_if_t<
             uint32_t val;
             memcpy((void *)&val, (void *)&cp, sizeof(Composite));
             val = gtoh(val, ArmISA::byteOrder(tc));
-            tc->setIntReg(ArmISA::INTREG_R0, val);
+            tc->setReg(ArmISA::int_reg::R0, val);
         } else {
             VPtr<Composite> cp(state.retAddr, tc);
             *cp = htog(composite, ArmISA::byteOrder(tc));
@@ -295,7 +298,7 @@ struct Result<Aapcs32, Composite, typename std::enable_if_t<
     prepare(ThreadContext *tc, Aapcs32::State &state)
     {
         if (sizeof(Composite) > sizeof(uint32_t))
-            state.retAddr = tc->readIntReg(state.ncrn++);
+            state.retAddr = tc->getReg(ArmISA::intRegClass[state.ncrn++]);
     }
 };
 
@@ -316,7 +319,7 @@ struct Argument<Aapcs32, Composite, typename std::enable_if_t<
         if (bytes <= chunk_size) {
             if (state.ncrn++ <= state.MAX_CRN) {
                 alignas(alignof(Composite)) uint32_t val =
-                    tc->readIntReg(state.ncrn++);
+                    tc->getReg(ArmISA::intRegClass[state.ncrn++]);
                 val = htog(val, ArmISA::byteOrder(tc));
                 return gtoh(*(Composite *)&val, ArmISA::byteOrder(tc));
             }
@@ -328,7 +331,7 @@ struct Argument<Aapcs32, Composite, typename std::enable_if_t<
         if (state.ncrn + regs - 1 <= state.MAX_CRN) {
             alignas(alignof(Composite)) uint8_t buf[bytes];
             for (int i = 0; i < regs; i++) {
-                Chunk val = tc->readIntReg(state.ncrn++);
+                Chunk val = tc->getReg(ArmISA::intRegClass[state.ncrn++]);
                 val = htog(val, ArmISA::byteOrder(tc));
                 size_t to_copy = std::min<size_t>(bytes, chunk_size);
                 memcpy(buf + i * chunk_size, &val, to_copy);
@@ -342,7 +345,7 @@ struct Argument<Aapcs32, Composite, typename std::enable_if_t<
 
             int offset = 0;
             while (state.ncrn <= state.MAX_CRN) {
-                Chunk val = tc->readIntReg(state.ncrn++);
+                Chunk val = tc->getReg(ArmISA::intRegClass[state.ncrn++]);
                 val = htog(val, ArmISA::byteOrder(tc));
                 size_t to_copy = std::min<size_t>(bytes, chunk_size);
                 memcpy(buf + offset, &val, to_copy);
@@ -351,8 +354,11 @@ struct Argument<Aapcs32, Composite, typename std::enable_if_t<
             }
 
             if (bytes) {
-                (FullSystem ? TranslatingPortProxy(tc) :
-                    SETranslatingPortProxy(tc)).readBlob(
+                TranslatingPortProxy fs_proxy(tc);
+                SETranslatingPortProxy se_proxy(tc);
+                PortProxy &virt_proxy = FullSystem ? fs_proxy : se_proxy;
+
+                virt_proxy.readBlob(
                     state.nsaa, buf, bytes);
 
                 state.stackUsed = true;
@@ -478,11 +484,8 @@ struct Result<Aapcs32Vfp, Float, typename std::enable_if_t<
         auto bytes = floatToBits(f);
         auto *vec_elems = static_cast<ArmISA::VecElem *>(&bytes);
         constexpr int chunks = sizeof(Float) / sizeof(ArmISA::VecElem);
-        for (int chunk = 0; chunk < chunks; chunk++) {
-            int reg = chunk / ArmISA::NumVecElemPerVecReg;
-            int elem = chunk % ArmISA::NumVecElemPerVecReg;
-            tc->setVecElem(RegId(VecElemClass, reg, elem), vec_elems[chunk]);
-        }
+        for (int chunk = 0; chunk < chunks; chunk++)
+            tc->setReg(ArmISA::vecElemClass[chunk], vec_elems[chunk]);
     };
 };
 
@@ -505,11 +508,8 @@ struct Argument<Aapcs32Vfp, Float, typename std::enable_if_t<
         auto *vec_elems = static_cast<ArmISA::VecElem *>(&result);
 
         constexpr int chunks = sizeof(Float) / sizeof(ArmISA::VecElem);
-        for (int chunk = 0; chunk < chunks; chunk++) {
-            int reg = chunk / ArmISA::NumVecElemPerVecReg;
-            int elem = chunk % ArmISA::NumVecElemPerVecReg;
-            vec_elems[chunk] = tc->readVecElem(RegId(VecElemClass, reg, elem));
-        }
+        for (int chunk = 0; chunk < chunks; chunk++)
+            vec_elems[chunk] = tc->getReg(ArmISA::vecElemClass[chunk]);
 
         return bitsToFloat(result);
     }
@@ -577,8 +577,9 @@ struct Argument<Aapcs32Vfp, HA, typename std::enable_if_t<
                 const int reg = index / lane_per_reg;
                 const int lane = index % lane_per_reg;
 
-                RegId id(VecRegClass, reg);
-                auto val = tc->readVecReg(id);
+                RegId id = ArmISA::vecRegClass[reg];
+                ArmISA::VecRegContainer val;
+                tc->getReg(id, &val);
                 ha[i] = val.as<Elem>()[lane];
             }
             return ha;
@@ -624,10 +625,11 @@ struct Result<Aapcs32Vfp, HA,
             const int reg = i / lane_per_reg;
             const int lane = i % lane_per_reg;
 
-            RegId id(VecRegClass, reg);
-            auto val = tc->readVecReg(id);
+            RegId id = ArmISA::vecRegClass[reg];
+            ArmISA::VecRegContainer val;
+            tc->getReg(id, &val);
             val.as<Elem>()[lane] = ha[i];
-            tc->setVecReg(id, val);
+            tc->setReg(id, &val);
         }
     }
 

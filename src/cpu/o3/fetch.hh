@@ -44,7 +44,6 @@
 #include "arch/generic/decoder.hh"
 #include "arch/generic/mmu.hh"
 #include "base/statistics.hh"
-#include "config/the_isa.hh"
 #include "cpu/o3/comm.hh"
 #include "cpu/o3/dyn_inst_ptr.hh"
 #include "cpu/o3/limits.hh"
@@ -61,7 +60,7 @@
 namespace gem5
 {
 
-struct O3CPUParams;
+struct BaseO3CPUParams;
 
 namespace o3
 {
@@ -203,7 +202,7 @@ class Fetch
 
   public:
     /** Fetch constructor. */
-    Fetch(CPU *_cpu, const O3CPUParams &params);
+    Fetch(CPU *_cpu, const BaseO3CPUParams &params);
 
     /** Returns the name of fetch. */
     std::string name() const;

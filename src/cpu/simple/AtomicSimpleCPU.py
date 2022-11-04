@@ -1,17 +1,4 @@
-# Copyright (c) 2012 ARM Limited
-# All rights reserved.
-#
-# The license below extends only to copyright in the software and shall
-# not be construed as granting a license to any other intellectual
-# property including but not limited to intellectual property relating
-# to a hardware implementation of the functionality of the software
-# licensed hereunder.  You may use the software subject to the license
-# terms below provided that you ensure that this notice is replicated
-# unmodified and in its entirety in all distributions of the software,
-# modified or unmodified, in source code or in binary form.
-#
-# Copyright (c) 2007 The Regents of The University of Michigan
-# All rights reserved.
+# Copyright 2021 Google, Inc.
 #
 # Redistribution and use in source and binary forms, with or without
 # modification, are permitted provided that the following conditions are
@@ -36,32 +23,30 @@
 # (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-from m5.params import *
-from m5.objects.BaseSimpleCPU import BaseSimpleCPU
-from m5.objects.SimPoint import SimPoint
+import m5.defines
 
-class AtomicSimpleCPU(BaseSimpleCPU):
-    """Simple CPU model executing a configurable number of
-    instructions per cycle. This model uses the simplified 'atomic'
-    memory mode."""
+arch_vars = [
+    "USE_ARM_ISA",
+    "USE_MIPS_ISA",
+    "USE_POWER_ISA",
+    "USE_RISCV_ISA",
+    "USE_SPARC_ISA",
+    "USE_X86_ISA",
+]
 
-    type = 'AtomicSimpleCPU'
-    cxx_header = "cpu/simple/atomic.hh"
-    cxx_class = 'gem5::AtomicSimpleCPU'
+enabled = list(filter(lambda var: m5.defines.buildEnv[var], arch_vars))
 
-    @classmethod
-    def memory_mode(cls):
-        return 'atomic'
-
-    @classmethod
-    def support_take_over(cls):
-        return True
-
-    width = Param.Int(1, "CPU width")
-    simulate_data_stalls = Param.Bool(False, "Simulate dcache stall cycles")
-    simulate_inst_stalls = Param.Bool(False, "Simulate icache stall cycles")
-
-    def addSimPointProbe(self, interval):
-        simpoint = SimPoint()
-        simpoint.interval = interval
-        self.probeListener = simpoint
+if len(enabled) == 1:
+    arch = enabled[0]
+    if arch == "USE_ARM_ISA":
+        from m5.objects.ArmCPU import ArmAtomicSimpleCPU as AtomicSimpleCPU
+    elif arch == "USE_MIPS_ISA":
+        from m5.objects.MipsCPU import MipsAtomicSimpleCPU as AtomicSimpleCPU
+    elif arch == "USE_POWER_ISA":
+        from m5.objects.PowerCPU import PowerAtomicSimpleCPU as AtomicSimpleCPU
+    elif arch == "USE_RISCV_ISA":
+        from m5.objects.RiscvCPU import RiscvAtomicSimpleCPU as AtomicSimpleCPU
+    elif arch == "USE_SPARC_ISA":
+        from m5.objects.SparcCPU import SparcAtomicSimpleCPU as AtomicSimpleCPU
+    elif arch == "USE_X86_ISA":
+        from m5.objects.X86CPU import X86AtomicSimpleCPU as AtomicSimpleCPU

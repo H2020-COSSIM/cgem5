@@ -56,6 +56,8 @@ class RiscvStaticInst : public StaticInst
         StaticInst(_mnemonic, __opClass), machInst(_machInst)
     {}
 
+    bool alignmentOk(ExecContext* xc, Addr addr, Addr size) const;
+
   public:
     ExtMachInst machInst;
 
@@ -80,7 +82,6 @@ class RiscvStaticInst : public StaticInst
         PCStateBase *ret_pc_ptr = call_pc.clone();
         auto &ret_pc = ret_pc_ptr->as<PCState>();
         ret_pc.advance();
-        ret_pc.pc(cur_pc.as<PCState>().npc());
         return std::unique_ptr<PCStateBase>{ret_pc_ptr};
     }
 
@@ -115,20 +116,20 @@ class RiscvMacroInst : public RiscvStaticInst
     }
 
     Fault
-    initiateAcc(ExecContext *xc, Trace::InstRecord *traceData) const override
+    initiateAcc(ExecContext *xc, trace::InstRecord *traceData) const override
     {
         panic("Tried to execute a macroop directly!\n");
     }
 
     Fault
     completeAcc(PacketPtr pkt, ExecContext *xc,
-                Trace::InstRecord *traceData) const override
+                trace::InstRecord *traceData) const override
     {
         panic("Tried to execute a macroop directly!\n");
     }
 
     Fault
-    execute(ExecContext *xc, Trace::InstRecord *traceData) const override
+    execute(ExecContext *xc, trace::InstRecord *traceData) const override
     {
         panic("Tried to execute a macroop directly!\n");
     }

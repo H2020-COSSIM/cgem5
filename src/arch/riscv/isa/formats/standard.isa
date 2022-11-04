@@ -45,7 +45,7 @@ def template ImmDeclare {{
       public:
         /// Constructor.
         %(class_name)s(MachInst machInst);
-        Fault execute(ExecContext *, Trace::InstRecord *) const override;
+        Fault execute(ExecContext *, trace::InstRecord *) const override;
         std::string generateDisassembly(Addr pc,
             const loader::SymbolTable *symtab) const override;
     };
@@ -64,7 +64,7 @@ def template ImmConstructor {{
 def template ImmExecute {{
     Fault
     %(class_name)s::execute(
-        ExecContext *xc, Trace::InstRecord *traceData) const
+        ExecContext *xc, trace::InstRecord *traceData) const
     {
         %(op_decl)s;
         %(op_rd)s;
@@ -90,7 +90,7 @@ def template ImmExecute {{
 def template CILuiExecute {{
     Fault
     %(class_name)s::execute(
-        ExecContext *xc, Trace::InstRecord *traceData) const
+        ExecContext *xc, trace::InstRecord *traceData) const
     {
         %(op_decl)s;
         %(op_rd)s;
@@ -118,7 +118,7 @@ def template CILuiExecute {{
 def template FenceExecute {{
     Fault
     %(class_name)s::execute(
-        ExecContext *xc, Trace::InstRecord *traceData) const
+        ExecContext *xc, trace::InstRecord *traceData) const
     {
         %(op_decl)s;
         %(op_rd)s;
@@ -169,7 +169,7 @@ def template BranchDeclare {{
       public:
         /// Constructor.
         %(class_name)s(MachInst machInst);
-        Fault execute(ExecContext *, Trace::InstRecord *) const override;
+        Fault execute(ExecContext *, trace::InstRecord *) const override;
 
         std::string
         generateDisassembly(
@@ -185,7 +185,7 @@ def template BranchDeclare {{
 def template BranchExecute {{
     Fault
     %(class_name)s::execute(ExecContext *xc,
-        Trace::InstRecord *traceData) const
+        trace::InstRecord *traceData) const
     {
         %(op_decl)s;
         %(op_rd)s;
@@ -227,7 +227,7 @@ def template JumpDeclare {{
       public:
         /// Constructor.
         %(class_name)s(MachInst machInst);
-        Fault execute(ExecContext *, Trace::InstRecord *) const override;
+        Fault execute(ExecContext *, trace::InstRecord *) const override;
 
         std::string
         generateDisassembly(
@@ -240,10 +240,53 @@ def template JumpDeclare {{
     };
 }};
 
+def template JumpConstructor {{
+    %(class_name)s::%(class_name)s(MachInst machInst)
+        : %(base_class)s("%(mnemonic)s", machInst, %(op_class)s)
+    {
+        %(set_reg_idx_arr)s;
+        %(constructor)s;
+        %(imm_code)s;
+        if (QUADRANT != 0x3) {
+            // Handle "c_jr" instruction, set "IsReturn" flag if RC1 is 1 or 5
+            if (CFUNCT1 == 0 && (RC1 == 1 || RC1 == 5))
+                flags[IsReturn] = true;
+        } else {
+            bool rd_link = (RD == 1 || RD == 5);
+            bool rs1_link = (RS1 == 1 || RS1 == 5);
+            // Handle "jalr" and "jal" instruction,
+            // set "IsCall" if RD is link register
+            if (rd_link)
+                flags[IsCall] = true;
+
+            // Handle "Jalr" instruction
+            if (FUNCT3 == 0x0) {
+                // If RD is not link and RS1 is link, then pop RAS
+                if (!rd_link && rs1_link) flags[IsReturn] = true;
+                else if (rd_link) {
+                    // If RD is link and RS1 is not link, push RAS
+                    if (!rs1_link) flags[IsCall] = true;
+                    // If RD is link and RS1 is link and rd != rs1
+                    else if (rs1_link) {
+                        if (RS1 != RD) {
+                            // Both are link and RS1 == RD, pop then push
+                            flags[IsReturn] = true;
+                            flags[IsCall] = true;
+                        } else {
+                            // Both are link and RS1 != RD, push RAS
+                            flags[IsCall] = true;
+                        }
+                    }
+                }
+            }
+        }
+    }
+}};
+
 def template JumpExecute {{
     Fault
     %(class_name)s::execute(
-        ExecContext *xc, Trace::InstRecord *traceData) const
+        ExecContext *xc, trace::InstRecord *traceData) const
     {
         %(op_decl)s;
         %(op_rd)s;
@@ -256,8 +299,7 @@ def template JumpExecute {{
     %(class_name)s::branchTarget(ThreadContext *tc) const
     {
         PCStateBase *pc_ptr = tc->pcState().clone();
-        pc_ptr->as<PCState>().set(
-                (tc->readIntReg(srcRegIdx(0).index()) + imm) & ~0x1);
+        pc_ptr->as<PCState>().set((tc->getReg(srcRegIdx(0)) + imm) & ~0x1);
         return std::unique_ptr<PCStateBase>{pc_ptr};
     }
 
@@ -279,34 +321,42 @@ def template JumpExecute {{
 def template CSRExecute {{
     Fault
     %(class_name)s::execute(ExecContext *xc,
-        Trace::InstRecord *traceData) const
+        trace::InstRecord *traceData) const
     {
-        if (!valid) {
+        // We assume a riscv instruction is always run with a riscv ISA.
+        auto isa = static_cast<RiscvISA::ISA*>(xc->tcBase()->getIsaPtr());
+        auto& csr_data = isa->getCSRDataMap();
+        auto& csr_masks = isa->getCSRMaskMap();
+
+        auto csr_data_it = csr_data.find(csr);
+        if (csr_data_it == csr_data.end()) {
             return std::make_shared<IllegalInstFault>(
                     csprintf("Illegal CSR index %#x\n", csr), machInst);
         }
+
+        RegIndex midx = csr_data_it->second.physIndex;
+        const std::string& csrName = csr_data_it->second.name;
+        auto mask_it = csr_masks.find(csr);
+        RegVal maskVal = (mask_it == csr_masks.end()) ? mask(64)
+                                                      : mask_it->second;
 
         %(op_decl)s;
         %(op_rd)s;
 
         RegVal data, olddata;
-
+        auto lowestAllowedMode = (PrivilegeMode)bits(csr, 9, 8);
+        auto pm = (PrivilegeMode)xc->readMiscReg(MISCREG_PRV);
+        if (pm < lowestAllowedMode) {
+            return std::make_shared<IllegalInstFault>(
+                    csprintf("%s is not accessible in %s\n", csrName, pm),
+                    machInst);
+        }
         switch (csr) {
           case CSR_SATP: {
-            auto pm = (PrivilegeMode)xc->readMiscReg(MISCREG_PRV);
             STATUS status = xc->readMiscReg(MISCREG_STATUS);
-            if (pm == PRV_U || (pm == PRV_S && status.tvm == 1)) {
+            if (pm == PRV_S && status.tvm == 1) {
                 return std::make_shared<IllegalInstFault>(
-                        "SATP access in user mode or with TVM enabled\n",
-                        machInst);
-            }
-            break;
-          }
-          case CSR_MSTATUS: {
-            auto pm = (PrivilegeMode)xc->readMiscReg(MISCREG_PRV);
-            if (pm != PrivilegeMode::PRV_M) {
-                return std::make_shared<IllegalInstFault>(
-                        "MSTATUS is only accessibly in machine mode\n",
+                        "SATP access with TVM enabled\n",
                         machInst);
             }
             break;
@@ -424,7 +474,7 @@ def format Jump(code, *opt_flags) {{
         {'code': code, 'imm_code': 'imm = sext<12>(IMM12);',
          'regs': ','.join(regs)}, opt_flags)
     header_output = JumpDeclare.subst(iop)
-    decoder_output = ImmConstructor.subst(iop)
+    decoder_output = JumpConstructor.subst(iop)
     decode_block = BasicDecode.subst(iop)
     exec_output = JumpExecute.subst(iop)
 }};
@@ -454,7 +504,7 @@ def format JOp(code, *opt_flags) {{
         {'code': code, 'imm_code': imm_code,
          'regs': ','.join(regs)}, opt_flags)
     header_output = BranchDeclare.subst(iop)
-    decoder_output = ImmConstructor.subst(iop)
+    decoder_output = JumpConstructor.subst(iop)
     decode_block = BasicDecode.subst(iop)
     exec_output = BranchExecute.subst(iop)
 }};

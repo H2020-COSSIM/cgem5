@@ -28,14 +28,14 @@ from itertools import chain
 from typing import List
 
 from m5.objects.SubSystem import SubSystem
-from gem5.components.cachehierarchies.ruby.abstract_ruby_cache_hierarchy \
-    import AbstractRubyCacheHierarchy
+from gem5.components.cachehierarchies.ruby.abstract_ruby_cache_hierarchy import (
+    AbstractRubyCacheHierarchy,
+)
 from gem5.components.cachehierarchies.abstract_cache_hierarchy import (
     AbstractCacheHierarchy,
 )
 from gem5.coherence_protocol import CoherenceProtocol
 from gem5.isas import ISA
-from gem5.runtime import get_runtime_isa
 from gem5.utils.requires import requires
 from gem5.utils.override import overrides
 from gem5.components.boards.abstract_board import AbstractBoard
@@ -50,12 +50,7 @@ from .nodes.dma_requestor import DMARequestor
 from .nodes.directory import SimpleDirectory
 from .nodes.memory_controller import MemoryController
 
-from m5.objects import (
-    NULL,
-    RubySystem,
-    RubySequencer,
-    RubyPortProxy,
-)
+from m5.objects import NULL, RubySystem, RubySequencer, RubyPortProxy
 
 
 class PrivateL1CacheHierarchy(AbstractRubyCacheHierarchy):
@@ -114,14 +109,15 @@ class PrivateL1CacheHierarchy(AbstractRubyCacheHierarchy):
         # Create the DMA Controllers, if required.
         if board.has_dma_ports():
             self.dma_controllers = self._create_dma_controllers(board)
-            self.ruby_system.num_of_sequencers = len(self.core_clusters) * 2 \
-                + len(self.dma_controllers)
+            self.ruby_system.num_of_sequencers = len(
+                self.core_clusters
+            ) * 2 + len(self.dma_controllers)
         else:
             self.ruby_system.num_of_sequencers = len(self.core_clusters) * 2
 
         self.ruby_system.network.connectControllers(
             list(
-                chain.from_iterable( # Grab the controllers from each cluster
+                chain.from_iterable(  # Grab the controllers from each cluster
                     [
                         (cluster.dcache, cluster.icache)
                         for cluster in self.core_clusters
@@ -140,10 +136,8 @@ class PrivateL1CacheHierarchy(AbstractRubyCacheHierarchy):
         self.ruby_system.sys_port_proxy = RubyPortProxy()
         board.connect_system_port(self.ruby_system.sys_port_proxy.in_ports)
 
-    def _create_core_cluster(self,
-        core: AbstractCore,
-        core_num: int,
-        board: AbstractBoard
+    def _create_core_cluster(
+        self, core: AbstractCore, core_num: int, board: AbstractBoard
     ) -> SubSystem:
         """Given the core and the core number this function creates a cluster
         for the core with a split I/D cache
@@ -155,7 +149,7 @@ class PrivateL1CacheHierarchy(AbstractRubyCacheHierarchy):
             network=self.ruby_system.network,
             core=core,
             cache_line_size=board.get_cache_line_size(),
-            target_isa=get_runtime_isa(),
+            target_isa=board.get_processor().get_isa(),
             clk_domain=board.get_clock_domain(),
         )
         cluster.icache = PrivateL1MOESICache(
@@ -164,14 +158,12 @@ class PrivateL1CacheHierarchy(AbstractRubyCacheHierarchy):
             network=self.ruby_system.network,
             core=core,
             cache_line_size=board.get_cache_line_size(),
-            target_isa=get_runtime_isa(),
+            target_isa=board.get_processor().get_isa(),
             clk_domain=board.get_clock_domain(),
         )
 
         cluster.icache.sequencer = RubySequencer(
-            version=core_num,
-            dcache=NULL,
-            clk_domain=cluster.icache.clk_domain,
+            version=core_num, dcache=NULL, clk_domain=cluster.icache.clk_domain
         )
         cluster.dcache.sequencer = RubySequencer(
             version=core_num,
@@ -194,7 +186,7 @@ class PrivateL1CacheHierarchy(AbstractRubyCacheHierarchy):
         )
 
         # Connect the interrupt ports
-        if get_runtime_isa() == ISA.X86:
+        if board.get_processor().get_isa() == ISA.X86:
             int_req_port = cluster.dcache.sequencer.interrupt_out_port
             int_resp_port = cluster.dcache.sequencer.in_ports
             core.connect_interrupt(int_req_port, int_resp_port)
@@ -207,23 +199,17 @@ class PrivateL1CacheHierarchy(AbstractRubyCacheHierarchy):
         return cluster
 
     def _create_memory_controllers(
-        self,
-        board: AbstractBoard
+        self, board: AbstractBoard
     ) -> List[MemoryController]:
         memory_controllers = []
-        for rng, port in board.get_memory().get_mem_ports():
-            mc = MemoryController(
-                self.ruby_system.network,
-                rng,
-                port,
-            )
+        for rng, port in board.get_mem_ports():
+            mc = MemoryController(self.ruby_system.network, rng, port)
             mc.ruby_system = self.ruby_system
             memory_controllers.append(mc)
         return memory_controllers
 
     def _create_dma_controllers(
-        self,
-        board: AbstractBoard
+        self, board: AbstractBoard
     ) -> List[DMARequestor]:
         dma_controllers = []
         for i, port in enumerate(board.get_dma_ports()):
@@ -233,10 +219,7 @@ class PrivateL1CacheHierarchy(AbstractRubyCacheHierarchy):
                 board.get_clock_domain(),
             )
             version = len(board.get_processor().get_cores()) + i
-            ctrl.sequencer = RubySequencer(
-                version=version,
-                in_ports=port
-            )
+            ctrl.sequencer = RubySequencer(version=version, in_ports=port)
             ctrl.sequencer.dcache = NULL
 
             ctrl.ruby_system = self.ruby_system

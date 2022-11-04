@@ -1,4 +1,4 @@
-# Copyright (c) 2012, 2017, 2019 ARM Limited
+# Copyright (c) 2012, 2017, 2019, 2022 Arm Limited
 # All rights reserved.
 #
 # The license below extends only to copyright in the software and shall
@@ -37,14 +37,16 @@ from abc import ABCMeta, abstractmethod
 import m5
 from m5.objects import *
 from m5.proxy import *
-m5.util.addToPath('../configs/')
+
+m5.util.addToPath("../configs/")
 from common import FSConfig
-from common.Caches import *
+from base_caches import *
 from base_config import *
 from common.cores.arm.O3_ARM_v7a import *
 from common.Benchmarks import SysConfig
 
 from common import SysPaths
+
 
 class ArmSESystemUniprocessor(BaseSESystemUniprocessor):
     """Syscall-emulation builder for ARM uniprocessor systems.
@@ -60,9 +62,10 @@ class ArmSESystemUniprocessor(BaseSESystemUniprocessor):
         # The atomic SE configurations do not use caches
         if self.mem_mode == "timing":
             # Use the more representative cache configuration
-            cpu.addTwoLevelCacheHierarchy(O3_ARM_v7a_ICache(),
-                                          O3_ARM_v7a_DCache(),
-                                          O3_ARM_v7aL2())
+            cpu.addTwoLevelCacheHierarchy(
+                O3_ARM_v7a_ICache(), O3_ARM_v7a_DCache(), O3_ARM_v7aL2()
+            )
+
 
 class LinuxArmSystemBuilder(object):
     """Mix-in that implements create_system.
@@ -71,7 +74,8 @@ class LinuxArmSystemBuilder(object):
     ARM-specific create_system method to a class deriving from one of
     the generic base systems.
     """
-    def __init__(self, machine_type, aarch64_kernel, **kwargs):
+
+    def __init__(self, machine_type, aarch64_kernel, enable_dvm, **kwargs):
         """
         Arguments:
           machine_type -- String describing the platform to simulate
@@ -79,10 +83,11 @@ class LinuxArmSystemBuilder(object):
           use_ruby -- True if ruby is used instead of the classic memory system
         """
         self.machine_type = machine_type
-        self.num_cpus = kwargs.get('num_cpus', 1)
-        self.mem_size = kwargs.get('mem_size', '256MB')
-        self.use_ruby = kwargs.get('use_ruby', False)
         self.aarch64_kernel = aarch64_kernel
+        self.enable_dvm = enable_dvm
+        self.num_cpus = kwargs.get("num_cpus", 1)
+        self.mem_size = kwargs.get("mem_size", "256MB")
+        self.use_ruby = kwargs.get("use_ruby", False)
 
     def init_kvm(self, system):
         """Do KVM-specific system initialization.
@@ -91,6 +96,7 @@ class LinuxArmSystemBuilder(object):
           system -- System to work on.
         """
         system.kvm_vm = KvmVM()
+        system.release = ArmDefaultRelease.for_kvm()
 
         # Arm KVM regressions will use a simulated GIC. This means that in
         # order to work we need to remove the system interface of the
@@ -119,9 +125,19 @@ class LinuxArmSystemBuilder(object):
         }
 
         sc = SysConfig(None, self.mem_size, [disk_image], "/dev/sda")
-        system = FSConfig.makeArmSystem(self.mem_mode,
-                                        self.machine_type, self.num_cpus,
-                                        sc, ruby=self.use_ruby)
+        system = FSConfig.makeArmSystem(
+            self.mem_mode,
+            self.machine_type,
+            self.num_cpus,
+            sc,
+            ruby=self.use_ruby,
+        )
+
+        # TODO: This is removing SECURITY and VIRTUALIZATION extensions
+        # from AArch32 runs to fix long regressions. Find a fix or
+        # remove EL3/EL2 support at AArch32
+        if not self.aarch64_kernel:
+            system.release = ArmRelease(extensions=["LPAE"])
 
         # We typically want the simulator to panic if the kernel
         # panics or oopses. This prevents the simulator from running
@@ -130,23 +146,32 @@ class LinuxArmSystemBuilder(object):
         system.workload.panic_on_oops = True
 
         system.workload.object_file = SysPaths.binary(
-                    default_kernels[self.machine_type])
+            default_kernels[self.machine_type]
+        )
 
         self.init_system(system)
+        if self.enable_dvm:
+            for cpu in system.cpu:
+                for decoder in cpu.decoder:
+                    decoder.dvm_enabled = True
 
-        system.workload.dtb_filename = \
-            os.path.join(m5.options.outdir, 'system.dtb')
+        system.workload.dtb_filename = os.path.join(
+            m5.options.outdir, "system.dtb"
+        )
         system.generateDtb(system.workload.dtb_filename)
         return system
 
-class LinuxArmFSSystem(LinuxArmSystemBuilder,
-                       BaseFSSystem):
+
+class LinuxArmFSSystem(LinuxArmSystemBuilder, BaseFSSystem):
     """Basic ARM full system builder."""
 
-    def __init__(self,
-                 machine_type='VExpress_GEM5_Foundation',
-                 aarch64_kernel=True,
-                 **kwargs):
+    def __init__(
+        self,
+        machine_type="VExpress_GEM5_Foundation",
+        aarch64_kernel=True,
+        enable_dvm=False,
+        **kwargs
+    ):
         """Initialize an ARM system that supports full system simulation.
 
         Note: Keyword arguments that are not listed below will be
@@ -157,16 +182,19 @@ class LinuxArmFSSystem(LinuxArmSystemBuilder,
         """
         BaseFSSystem.__init__(self, **kwargs)
         LinuxArmSystemBuilder.__init__(
-            self, machine_type, aarch64_kernel, **kwargs)
+            self, machine_type, aarch64_kernel, enable_dvm, **kwargs
+        )
 
     def create_caches_private(self, cpu):
         # Use the more representative cache configuration
-        cpu.addTwoLevelCacheHierarchy(O3_ARM_v7a_ICache(),
-                                      O3_ARM_v7a_DCache(),
-                                      O3_ARM_v7aL2())
+        cpu.addTwoLevelCacheHierarchy(
+            O3_ARM_v7a_ICache(), O3_ARM_v7a_DCache(), O3_ARM_v7aL2()
+        )
 
-class LinuxArmFSSystemUniprocessor(LinuxArmSystemBuilder,
-                                   BaseFSSystemUniprocessor):
+
+class LinuxArmFSSystemUniprocessor(
+    LinuxArmSystemBuilder, BaseFSSystemUniprocessor
+):
     """Basic ARM full system builder for uniprocessor systems.
 
     Note: This class is a specialization of the ArmFSSystem and is
@@ -174,21 +202,28 @@ class LinuxArmFSSystemUniprocessor(LinuxArmSystemBuilder,
     test cases.
     """
 
-    def __init__(self,
-                 machine_type='VExpress_GEM5_Foundation',
-                 aarch64_kernel=True,
-                 **kwargs):
+    def __init__(
+        self,
+        machine_type="VExpress_GEM5_Foundation",
+        aarch64_kernel=True,
+        **kwargs
+    ):
         BaseFSSystemUniprocessor.__init__(self, **kwargs)
         LinuxArmSystemBuilder.__init__(
-            self, machine_type, aarch64_kernel, **kwargs)
+            self, machine_type, aarch64_kernel, False, **kwargs
+        )
+
 
 class LinuxArmFSSwitcheroo(LinuxArmSystemBuilder, BaseFSSwitcheroo):
     """Uniprocessor ARM system prepared for CPU switching"""
 
-    def __init__(self,
-                 machine_type='VExpress_GEM5_Foundation',
-                 aarch64_kernel=True,
-                 **kwargs):
+    def __init__(
+        self,
+        machine_type="VExpress_GEM5_Foundation",
+        aarch64_kernel=True,
+        **kwargs
+    ):
         BaseFSSwitcheroo.__init__(self, **kwargs)
         LinuxArmSystemBuilder.__init__(
-            self, machine_type, aarch64_kernel, **kwargs)
+            self, machine_type, aarch64_kernel, False, **kwargs
+        )

@@ -53,10 +53,10 @@ def template MicroMemDeclare {{
         %(class_name)s(ExtMachInst machInst,
                        RegIndex _ura, RegIndex _urb, bool _up,
                        uint8_t _imm);
-        Fault execute(ExecContext *, Trace::InstRecord *) const override;
-        Fault initiateAcc(ExecContext *, Trace::InstRecord *) const override;
+        Fault execute(ExecContext *, trace::InstRecord *) const override;
+        Fault initiateAcc(ExecContext *, trace::InstRecord *) const override;
         Fault completeAcc(PacketPtr, ExecContext *,
-                          Trace::InstRecord *) const override;
+                          trace::InstRecord *) const override;
     };
 }};
 
@@ -90,10 +90,10 @@ def template MicroMemPairDeclare {{
         %(class_name)s(ExtMachInst machInst,
                        RegIndex _dreg1, RegIndex _dreg2, RegIndex _base,
                        bool _up, uint8_t _imm);
-        Fault execute(ExecContext *, Trace::InstRecord *) const override;
-        Fault initiateAcc(ExecContext *, Trace::InstRecord *) const override;
+        Fault execute(ExecContext *, trace::InstRecord *) const override;
+        Fault initiateAcc(ExecContext *, trace::InstRecord *) const override;
         Fault completeAcc(PacketPtr, ExecContext *,
-                          Trace::InstRecord *) const override;
+                          trace::InstRecord *) const override;
     };
 }};
 
@@ -145,10 +145,10 @@ def template MicroNeonMemDeclare {{
             }
         }
 
-        Fault execute(ExecContext *, Trace::InstRecord *) const override;
-        Fault initiateAcc(ExecContext *, Trace::InstRecord *) const override;
+        Fault execute(ExecContext *, trace::InstRecord *) const override;
+        Fault initiateAcc(ExecContext *, trace::InstRecord *) const override;
         Fault completeAcc(PacketPtr, ExecContext *,
-                          Trace::InstRecord *) const override;
+                          trace::InstRecord *) const override;
     };
 }};
 
@@ -166,18 +166,18 @@ def template MicroSetPCCPSRDeclare {{
 
       public:
         %(class_name)s(ExtMachInst machInst,
-                       IntRegIndex _ura,
-                       IntRegIndex _urb,
-                       IntRegIndex _urc);
-        Fault execute(ExecContext *, Trace::InstRecord *) const override;
+                       RegIndex _ura,
+                       RegIndex _urb,
+                       RegIndex _urc);
+        Fault execute(ExecContext *, trace::InstRecord *) const override;
     };
 }};
 
 def template MicroSetPCCPSRConstructor {{
     %(class_name)s::%(class_name)s(ExtMachInst machInst,
-                                   IntRegIndex _ura,
-                                   IntRegIndex _urb,
-                                   IntRegIndex _urc) :
+                                   RegIndex _ura,
+                                   RegIndex _urb,
+                                   RegIndex _urc) :
           %(base_class)s("%(mnemonic)s", machInst, %(op_class)s,
                            _ura, _urb, _urc)
     {
@@ -202,19 +202,19 @@ def template MicroSetPCCPSRConstructor {{
 def template MicroNeonMemExecDeclare {{
     template
     Fault %(class_name)s<%(targs)s>::execute(
-            ExecContext *, Trace::InstRecord *) const;
+            ExecContext *, trace::InstRecord *) const;
     template
     Fault %(class_name)s<%(targs)s>::initiateAcc(
-            ExecContext *, Trace::InstRecord *) const;
+            ExecContext *, trace::InstRecord *) const;
     template
     Fault %(class_name)s<%(targs)s>::completeAcc(PacketPtr,
-            ExecContext *, Trace::InstRecord *) const;
+            ExecContext *, trace::InstRecord *) const;
 }};
 
 def template MicroNeonExecDeclare {{
     template
     Fault %(class_name)s<%(targs)s>::execute(
-            ExecContext *, Trace::InstRecord *) const;
+            ExecContext *, trace::InstRecord *) const;
 }};
 
 ////////////////////////////////////////////////////////////////////
@@ -244,14 +244,14 @@ def template MicroNeonMixDeclare {{
             }
         }
 
-        Fault execute(ExecContext *, Trace::InstRecord *) const override;
+        Fault execute(ExecContext *, trace::InstRecord *) const override;
     };
 }};
 
 def template MicroNeonMixExecute {{
     template <class Element>
     Fault %(class_name)s<Element>::execute(ExecContext *xc,
-            Trace::InstRecord *traceData) const
+            trace::InstRecord *traceData) const
     {
         Fault fault = NoFault;
         uint64_t resTemp = 0;
@@ -299,7 +299,7 @@ def template MicroNeonMixLaneDeclare {{
             }
         }
 
-        Fault execute(ExecContext *, Trace::InstRecord *) const override;
+        Fault execute(ExecContext *, trace::InstRecord *) const override;
     };
 }};
 
@@ -317,7 +317,7 @@ def template MicroIntMovDeclare {{
       public:
         %(class_name)s(ExtMachInst machInst,
                        RegIndex _ura, RegIndex _urb);
-        Fault execute(ExecContext *, Trace::InstRecord *) const override;
+        Fault execute(ExecContext *, trace::InstRecord *) const override;
     };
 }};
 def template MicroIntMovConstructor {{
@@ -352,7 +352,7 @@ def template MicroIntImmDeclare {{
         %(class_name)s(ExtMachInst machInst,
                        RegIndex _ura, RegIndex _urb,
                        int32_t _imm);
-        Fault execute(ExecContext *, Trace::InstRecord *) const override;
+        Fault execute(ExecContext *, trace::InstRecord *) const override;
     };
 }};
 
@@ -397,7 +397,7 @@ def template MicroIntRegDeclare {{
         %(class_name)s(ExtMachInst machInst,
                        RegIndex _ura, RegIndex _urb, RegIndex _urc,
                        int32_t _shiftAmt, ArmShiftType _shiftType);
-        Fault execute(ExecContext *, Trace::InstRecord *) const override;
+        Fault execute(ExecContext *, trace::InstRecord *) const override;
     };
 }};
 
@@ -423,7 +423,7 @@ def template MicroIntXERegDeclare {{
         %(class_name)s(ExtMachInst machInst,
                        RegIndex _ura, RegIndex _urb, RegIndex _urc,
                        ArmExtendType _type, uint32_t _shiftAmt);
-        Fault execute(ExecContext *, Trace::InstRecord *) const override;
+        Fault execute(ExecContext *, trace::InstRecord *) const override;
     };
 }};
 
@@ -461,13 +461,13 @@ class %(class_name)s : public %(base_class)s
 
   public:
     // Constructor
-    %(class_name)s(ExtMachInst machInst, IntRegIndex rn, bool index, bool up,
+    %(class_name)s(ExtMachInst machInst, RegIndex rn, bool index, bool up,
             bool user, bool writeback, bool load, uint32_t reglist);
 };
 }};
 
 def template MacroMemConstructor {{
-%(class_name)s::%(class_name)s(ExtMachInst machInst, IntRegIndex rn,
+%(class_name)s::%(class_name)s(ExtMachInst machInst, RegIndex rn,
         bool index, bool up, bool user, bool writeback, bool load,
         uint32_t reglist) :
     %(base_class)s("%(mnemonic)s", machInst, %(op_class)s, rn,
@@ -493,13 +493,13 @@ class %(class_name)s : public %(base_class)s
   public:
     // Constructor
     %(class_name)s(const char *mnemonic, ExtMachInst machInst,
-                   bool load, IntRegIndex dest, IntRegIndex base, int64_t imm);
+                   bool load, RegIndex dest, RegIndex base, int64_t imm);
 };
 }};
 
 def template BigFpMemImmConstructor {{
 %(class_name)s::%(class_name)s(const char *mnemonic, ExtMachInst machInst,
-        bool load, IntRegIndex dest, IntRegIndex base, int64_t imm) :
+        bool load, RegIndex dest, RegIndex base, int64_t imm) :
     %(base_class)s(mnemonic, machInst, %(op_class)s, load, dest, base, imm)
 {
     %(set_reg_idx_arr)s;
@@ -516,15 +516,15 @@ class %(class_name)s : public %(base_class)s
   public:
     // Constructor
     %(class_name)s(const char *mnemonic, ExtMachInst machInst,
-                   bool load, IntRegIndex dest, IntRegIndex base,
-                   IntRegIndex offset, ArmExtendType type, int64_t imm);
+                   bool load, RegIndex dest, RegIndex base,
+                   RegIndex offset, ArmExtendType type, int64_t imm);
 };
 }};
 
 def template BigFpMemRegConstructor {{
 %(class_name)s::%(class_name)s(const char *mnemonic, ExtMachInst machInst,
-        bool load, IntRegIndex dest, IntRegIndex base,
-        IntRegIndex offset, ArmExtendType type, int64_t imm) :
+        bool load, RegIndex dest, RegIndex base,
+        RegIndex offset, ArmExtendType type, int64_t imm) :
     %(base_class)s(mnemonic, machInst, %(op_class)s, load, dest, base,
                    offset, type, imm)
 {
@@ -542,13 +542,13 @@ class %(class_name)s : public %(base_class)s
   public:
     // Constructor
     %(class_name)s(const char *mnemonic, ExtMachInst machInst,
-                   IntRegIndex dest, int64_t imm);
+                   RegIndex dest, int64_t imm);
 };
 }};
 
 def template BigFpMemLitConstructor {{
 %(class_name)s::%(class_name)s(const char *mnemonic, ExtMachInst machInst,
-        IntRegIndex dest, int64_t imm) :
+        RegIndex dest, int64_t imm) :
     %(base_class)s(mnemonic, machInst, %(op_class)s, dest, imm)
 {
     %(set_reg_idx_arr)s;
@@ -567,8 +567,8 @@ class %(class_name)s : public %(base_class)s
     %(class_name)s(const char *mnemonic, ExtMachInst machInst,
             uint32_t size, bool fp, bool load, bool noAlloc, bool signExt,
             bool exclusive, bool acrel, uint32_t imm,
-            AddrMode mode, IntRegIndex rn, IntRegIndex rt,
-            IntRegIndex rt2);
+            AddrMode mode, RegIndex rn, RegIndex rt,
+            RegIndex rt2);
 };
 }};
 
@@ -576,7 +576,7 @@ def template PairMemConstructor {{
 %(class_name)s::%(class_name)s(const char *mnemonic, ExtMachInst machInst,
         uint32_t size, bool fp, bool load, bool noAlloc, bool signExt,
         bool exclusive, bool acrel, uint32_t imm, AddrMode mode,
-        IntRegIndex rn, IntRegIndex rt, IntRegIndex rt2) :
+        RegIndex rn, RegIndex rt, RegIndex rt2) :
     %(base_class)s(mnemonic, machInst, %(op_class)s, size,
                    fp, load, noAlloc, signExt, exclusive, acrel,
                    imm, mode, rn, rt, rt2)
@@ -659,14 +659,14 @@ class %(class_name)s : public %(base_class)s
 
   public:
     // Constructor
-    %(class_name)s(ExtMachInst machInst, IntRegIndex rn,
+    %(class_name)s(ExtMachInst machInst, RegIndex rn,
             RegIndex vd, bool single, bool up, bool writeback,
             bool load, uint32_t offset);
 };
 }};
 
 def template MacroVFPMemConstructor {{
-%(class_name)s::%(class_name)s(ExtMachInst machInst, IntRegIndex rn,
+%(class_name)s::%(class_name)s(ExtMachInst machInst, RegIndex rn,
         RegIndex vd, bool single, bool up, bool writeback, bool load,
         uint32_t offset) :
     %(base_class)s("%(mnemonic)s", machInst, %(op_class)s, rn,

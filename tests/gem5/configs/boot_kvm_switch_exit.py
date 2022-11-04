@@ -37,14 +37,16 @@ from gem5.isas import ISA
 from gem5.components.boards.x86_board import X86Board
 from gem5.coherence_protocol import CoherenceProtocol
 from gem5.components.memory import SingleChannelDDR3_1600
-from gem5.components.processors.cpu_types import CPUTypes
+from gem5.components.processors.cpu_types import (
+    CPUTypes,
+    get_cpu_types_str_set,
+    get_cpu_type_from_str,
+)
 from gem5.components.processors.simple_switchable_processor import (
     SimpleSwitchableProcessor,
 )
 from gem5.resources.resource import Resource
-from gem5.runtime import (
-    get_runtime_coherence_protocol, get_runtime_isa
-)
+from gem5.runtime import get_runtime_coherence_protocol
 from gem5.simulate.simulator import Simulator
 from gem5.simulate.exit_event import ExitEvent
 from gem5.utils.requires import requires
@@ -73,7 +75,7 @@ parser.add_argument(
     "-c",
     "--cpu",
     type=str,
-    choices=("kvm", "atomic", "timing", "o3"),
+    choices=get_cpu_types_str_set(),
     required=True,
     help="The CPU type.",
 )
@@ -108,15 +110,13 @@ requires(
 
 cache_hierarchy = None
 if args.mem_system == "mi_example":
-    from gem5.components.cachehierarchies.ruby.\
-        mi_example_cache_hierarchy import (
+    from gem5.components.cachehierarchies.ruby.mi_example_cache_hierarchy import (
         MIExampleCacheHierarchy,
     )
 
     cache_hierarchy = MIExampleCacheHierarchy(size="32kB", assoc=8)
 elif args.mem_system == "mesi_two_level":
-    from gem5.components.cachehierarchies.ruby.\
-        mesi_two_level_cache_hierarchy import (
+    from gem5.components.cachehierarchies.ruby.mesi_two_level_cache_hierarchy import (
         MESITwoLevelCacheHierarchy,
     )
 
@@ -130,8 +130,7 @@ elif args.mem_system == "mesi_two_level":
         num_l2_banks=1,
     )
 elif args.mem_system == "classic":
-    from gem5.components.cachehierarchies.classic.\
-        private_l1_cache_hierarchy import (
+    from gem5.components.cachehierarchies.classic.private_l1_cache_hierarchy import (
         PrivateL1CacheHierarchy,
     )
 
@@ -149,25 +148,10 @@ assert cache_hierarchy != None
 memory = SingleChannelDDR3_1600(size="3GB")
 
 # Setup a Processor.
-cpu_type = None
-if args.cpu == "kvm":
-    cpu_type = CPUTypes.KVM
-elif args.cpu == "atomic":
-    cpu_type = CPUTypes.ATOMIC
-elif args.cpu == "timing":
-    cpu_type = CPUTypes.TIMING
-elif args.cpu == "o3":
-    cpu_type = CPUTypes.O3
-else:
-    raise NotImplementedError(
-        "CPU type '{}' is not supported in the boot tests.".format(args.cpu)
-    )
-
-assert cpu_type != None
-
 processor = SimpleSwitchableProcessor(
     starting_core_type=CPUTypes.KVM,
-    switch_core_type=cpu_type,
+    switch_core_type=get_cpu_type_from_str(args.cpu),
+    isa=ISA.X86,
     num_cores=args.num_cpus,
 )
 
@@ -184,12 +168,10 @@ kernal_args = motherboard.get_default_kernel_args() + [args.kernel_args]
 # Set the Full System workload.
 motherboard.set_kernel_disk_workload(
     kernel=Resource(
-        "x86-linux-kernel-5.4.49",
-        resource_directory=args.resource_directory,
+        "x86-linux-kernel-5.4.49", resource_directory=args.resource_directory
     ),
     disk_image=Resource(
-        "x86-ubuntu-18.04-img",
-        resource_directory=args.resource_directory,
+        "x86-ubuntu-18.04-img", resource_directory=args.resource_directory
     ),
     # The first exit signals to switch processors.
     readfile_contents="m5 exit\nm5 exit\n",
@@ -199,7 +181,7 @@ motherboard.set_kernel_disk_workload(
 
 # Begin running of the simulation. This will exit once the Linux system boot
 # is complete.
-print("Running with ISA: " + get_runtime_isa().name)
+print("Running with ISA: " + processor.get_isa().name)
 print("Running with protocol: " + get_runtime_coherence_protocol().name)
 print()
 
@@ -208,7 +190,7 @@ simulator = Simulator(
     on_exit_event={
         # When we reach the first exit, we switch cores. For the second exit we
         # simply exit the simulation (default behavior).
-        ExitEvent.EXIT : (i() for i in [processor.switch]),
+        ExitEvent.EXIT: (i() for i in [processor.switch])
     },
     # This parameter allows us to state the expected order-of-execution.
     # That is, we expect two exit events. If anyother event is triggered, an
@@ -220,7 +202,6 @@ simulator.run()
 
 print(
     "Exiting @ tick {} because {}.".format(
-        simulator.get_current_tick(),
-        simulator.get_last_exit_event_cause(),
+        simulator.get_current_tick(), simulator.get_last_exit_event_cause()
     )
 )

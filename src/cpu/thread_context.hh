@@ -48,9 +48,7 @@
 #include "arch/generic/htm.hh"
 #include "arch/generic/isa.hh"
 #include "arch/generic/pcstate.hh"
-#include "arch/vecregs.hh"
 #include "base/types.hh"
-#include "config/the_isa.hh"
 #include "cpu/pc_event.hh"
 #include "cpu/reg_class.hh"
 
@@ -59,10 +57,6 @@ namespace gem5
 
 // @todo: Figure out a more architecture independent way to obtain the ITB and
 // DTB pointers.
-namespace TheISA
-{
-    class Decoder;
-}
 class BaseCPU;
 class BaseMMU;
 class BaseTLB;
@@ -142,7 +136,7 @@ class ThreadContext : public PCEventScope
 
     virtual CheckerCPU *getCheckerCpuPtr() = 0;
 
-    virtual BaseISA *getIsaPtr() = 0;
+    virtual BaseISA *getIsaPtr() const = 0;
 
     virtual InstDecoder *getDecoderPtr() = 0;
 
@@ -193,36 +187,12 @@ class ThreadContext : public PCEventScope
     //
     // New accessors for new decoder.
     //
-    virtual RegVal readIntReg(RegIndex reg_idx) const = 0;
+    virtual RegVal getReg(const RegId &reg) const;
+    virtual void getReg(const RegId &reg, void *val) const = 0;
+    virtual void *getWritableReg(const RegId &reg) = 0;
 
-    virtual RegVal readFloatReg(RegIndex reg_idx) const = 0;
-
-    virtual const TheISA::VecRegContainer&
-        readVecReg(const RegId& reg) const = 0;
-    virtual TheISA::VecRegContainer& getWritableVecReg(const RegId& reg) = 0;
-
-    virtual RegVal readVecElem(const RegId& reg) const = 0;
-
-    virtual const TheISA::VecPredRegContainer& readVecPredReg(
-            const RegId& reg) const = 0;
-    virtual TheISA::VecPredRegContainer& getWritableVecPredReg(
-            const RegId& reg) = 0;
-
-    virtual RegVal readCCReg(RegIndex reg_idx) const = 0;
-
-    virtual void setIntReg(RegIndex reg_idx, RegVal val) = 0;
-
-    virtual void setFloatReg(RegIndex reg_idx, RegVal val) = 0;
-
-    virtual void setVecReg(const RegId& reg,
-            const TheISA::VecRegContainer& val) = 0;
-
-    virtual void setVecElem(const RegId& reg, RegVal val) = 0;
-
-    virtual void setVecPredReg(const RegId& reg,
-            const TheISA::VecPredRegContainer& val) = 0;
-
-    virtual void setCCReg(RegIndex reg_idx, RegVal val) = 0;
+    virtual void setReg(const RegId &reg, RegVal val);
+    virtual void setReg(const RegId &reg, const void *val) = 0;
 
     virtual const PCStateBase &pcState() const = 0;
 
@@ -244,8 +214,6 @@ class ThreadContext : public PCEventScope
 
     virtual void setMiscReg(RegIndex misc_reg, RegVal val) = 0;
 
-    virtual RegId flattenRegId(const RegId& reg_id) const = 0;
-
     // Also not necessarily the best location for these two.  Hopefully will go
     // away once we decide upon where st cond failures goes.
     virtual unsigned readStCondFailures() const = 0;
@@ -259,46 +227,6 @@ class ThreadContext : public PCEventScope
 
     /** function to compare two thread contexts (for debugging) */
     static void compare(ThreadContext *one, ThreadContext *two);
-
-    /** @{ */
-    /**
-     * Flat register interfaces
-     *
-     * Some architectures have different registers visible in
-     * different modes. Such architectures "flatten" a register (see
-     * flattenRegId()) to map it into the
-     * gem5 register file. This interface provides a flat interface to
-     * the underlying register file, which allows for example
-     * serialization code to access all registers.
-     */
-
-    virtual RegVal readIntRegFlat(RegIndex idx) const = 0;
-    virtual void setIntRegFlat(RegIndex idx, RegVal val) = 0;
-
-    virtual RegVal readFloatRegFlat(RegIndex idx) const = 0;
-    virtual void setFloatRegFlat(RegIndex idx, RegVal val) = 0;
-
-    virtual const TheISA::VecRegContainer&
-        readVecRegFlat(RegIndex idx) const = 0;
-    virtual TheISA::VecRegContainer& getWritableVecRegFlat(RegIndex idx) = 0;
-    virtual void setVecRegFlat(RegIndex idx,
-            const TheISA::VecRegContainer& val) = 0;
-
-    virtual RegVal readVecElemFlat(RegIndex idx,
-            const ElemIndex& elem_idx) const = 0;
-    virtual void setVecElemFlat(RegIndex idx, const ElemIndex& elem_idx,
-            RegVal val) = 0;
-
-    virtual const TheISA::VecPredRegContainer &
-        readVecPredRegFlat(RegIndex idx) const = 0;
-    virtual TheISA::VecPredRegContainer& getWritableVecPredRegFlat(
-            RegIndex idx) = 0;
-    virtual void setVecPredRegFlat(RegIndex idx,
-            const TheISA::VecPredRegContainer& val) = 0;
-
-    virtual RegVal readCCRegFlat(RegIndex idx) const = 0;
-    virtual void setCCRegFlat(RegIndex idx, RegVal val) = 0;
-    /** @} */
 
     // hardware transactional memory
     virtual void htmAbortTransaction(uint64_t htm_uid,

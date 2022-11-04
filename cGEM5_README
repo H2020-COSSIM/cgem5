@@ -1,4 +1,4 @@
-GEM5 21.2.1.0 (March 2022) is used.
+GEM5 22.0.0.1 (Nov. 2022) is used.
 
 The following changes have been performed in order to integrate GEM5 with the other COSSIM parts through CERTI 4.0.0 HLA.
 
@@ -15,4 +15,10 @@ The following changes have been performed in order to integrate GEM5 with the ot
 11. Changing the file /gem5/configs/common/Simulation.py (McPat execution)
 12. Changing the file /gem5/src/dev/x86/SouthBridge.py
 13. Changing the file /gem5/src/dev/x86/Pc.py
-
+14. Changing the file /gem5/configs/example/arm/devices.py
+15. Changing the file /gem5/src/dev/riscv/HiFive.py
+16. Changing the file /gem5/configs/example/arm/fs_bigLITTLE.py
+17. Changing the file /gem5/configs/example/gem5_library/riscv-fs.py
+18. Changing the file /gem5/configs/example/gem5_library/riscv-ubuntu-run.py
+19. Changing the file /gem5/src/python/gem5/components/boards/riscv_board.py
+20. Changing the file /gem5/src/python/gem5/components/boards/kernel_disk_workload.py

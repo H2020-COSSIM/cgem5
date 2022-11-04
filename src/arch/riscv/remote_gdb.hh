@@ -56,7 +56,7 @@ class RemoteGDB : public BaseRemoteGDB
 
     bool acc(Addr addr, size_t len) override;
     // A breakpoint will be 2 bytes if it is compressed and 4 if not
-    bool checkBpLen(size_t len) override { return len == 2 || len == 4; }
+    bool checkBpKind(size_t kind) override { return kind == 2 || kind == 4; }
 
     class RiscvGdbRegCache : public BaseGdbRegCache
     {
@@ -72,9 +72,9 @@ class RemoteGDB : public BaseRemoteGDB
          */
         struct
         {
-            uint64_t gpr[NumIntArchRegs];
+            uint64_t gpr[int_reg::NumArchRegs];
             uint64_t pc;
-            uint64_t fpu[NumFloatRegs];
+            uint64_t fpu[float_reg::NumRegs];
             uint32_t fflags;
             uint32_t frm;
             uint32_t fcsr;

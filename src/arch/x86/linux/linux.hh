@@ -40,6 +40,8 @@
 
 #include <map>
 
+#include "arch/x86/regs/int.hh"
+#include "arch/x86/regs/misc.hh"
 #include "arch/x86/utility.hh"
 #include "base/compiler.hh"
 #include "kern/linux/flag_tables.hh"
@@ -64,12 +66,12 @@ class X86Linux : public Linux
         ctc->getIsaPtr()->copyRegsFrom(ptc);
 
         if (flags & TGT_CLONE_SETTLS) {
-            ctc->setMiscRegNoEffect(X86ISA::MISCREG_FS_BASE, tls);
-            ctc->setMiscRegNoEffect(X86ISA::MISCREG_FS_EFF_BASE, tls);
+            ctc->setMiscRegNoEffect(X86ISA::misc_reg::FsBase, tls);
+            ctc->setMiscRegNoEffect(X86ISA::misc_reg::FsEffBase, tls);
         }
 
         if (stack)
-            ctc->setIntReg(X86ISA::INTREG_RSP, stack);
+            ctc->setReg(X86ISA::int_reg::Rsp, stack);
     }
 
     class SyscallABI {};
@@ -86,7 +88,7 @@ struct Result<ABI, SyscallReturn,
     static void
     store(ThreadContext *tc, const SyscallReturn &ret)
     {
-        tc->setIntReg(X86ISA::INTREG_RAX, ret.encodedValue());
+        tc->setReg(X86ISA::int_reg::Rax, ret.encodedValue());
     }
 };
 
@@ -238,6 +240,21 @@ class X86Linux64 : public X86Linux, public OpenFlagTable<X86Linux64>
         uint64_t totalhigh; /* Total high memory size */
         uint64_t freehigh;  /* Available high memory size */
         uint64_t mem_unit;  /* Memory unit size in bytes */
+    };
+
+    struct tgt_clone_args
+    {
+        uint64_t flags;
+        uint64_t pidfd;
+        uint64_t child_tid;
+        uint64_t parent_tid;
+        uint64_t exit_signal;
+        uint64_t stack;
+        uint64_t stack_size;
+        uint64_t tls;
+        uint64_t set_tid;
+        uint64_t set_tid_size;
+        uint64_t cgroup;
     };
 
 };

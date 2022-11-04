@@ -25,11 +25,12 @@
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 
+from abc import abstractmethod
 from m5.objects import Port, PortTerminator
 from ...utils.override import overrides
 
-from .cpu_types import CPUTypes
 from .abstract_core import AbstractCore
+from ...isas import ISA
 
 from typing import Optional
 
@@ -46,13 +47,19 @@ class AbstractGeneratorCore(AbstractCore):
 
     def __init__(self):
         """
-        Create an AbstractCore with the CPUType of Timing. Also, setup a
-        dummy generator object to connect to icache
+        Create an AbstractCore. Also, setup a dummy generator object to connect
+        to icache.
         """
-        # TODO: Remove the CPU Type parameter. This not needed.
-        # Jira issue here: https://gem5.atlassian.net/browse/GEM5-1031
-        super().__init__(CPUTypes.TIMING)
+        super().__init__()
         self.port_end = PortTerminator()
+
+    @overrides(AbstractCore)
+    def is_kvm_core(self) -> bool:
+        return False
+
+    @overrides(AbstractCore)
+    def get_isa(self) -> ISA:
+        return ISA.NULL
 
     @overrides(AbstractCore)
     def connect_icache(self, port: Port) -> None:
@@ -94,3 +101,12 @@ class AbstractGeneratorCore(AbstractCore):
         connect them to walker ports. Just pass here.
         """
         pass
+
+    @abstractmethod
+    def start_traffic(self):
+        """
+        External interface to start generating the trace of addresses.
+        Depending on what SimObject is wrapped by this component this method
+        might need be implemented.
+        """
+        raise NotImplementedError

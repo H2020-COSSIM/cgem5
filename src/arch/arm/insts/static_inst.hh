@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010-2013,2016-2018 ARM Limited
+ * Copyright (c) 2010-2013,2016-2018, 2022 Arm Limited
  * All rights reserved
  *
  * The license below extends only to copyright in the software and shall
@@ -184,18 +184,18 @@ class ArmStaticInst : public StaticInst
     void printMemSymbol(std::ostream &os, const loader::SymbolTable *symtab,
                         const std::string &prefix, const Addr addr,
                         const std::string &suffix) const;
-    void printShiftOperand(std::ostream &os, IntRegIndex rm,
+    void printShiftOperand(std::ostream &os, RegIndex rm,
                            bool immShift, uint32_t shiftAmt,
-                           IntRegIndex rs, ArmShiftType type) const;
+                           RegIndex rs, ArmShiftType type) const;
     void printExtendOperand(bool firstOperand, std::ostream &os,
-                            IntRegIndex rm, ArmExtendType type,
+                            RegIndex rm, ArmExtendType type,
                             int64_t shiftAmt) const;
     void printPFflags(std::ostream &os, int flag) const;
 
     void printDataInst(std::ostream &os, bool withImm) const;
     void printDataInst(std::ostream &os, bool withImm, bool immShift, bool s,
-                       IntRegIndex rd, IntRegIndex rn, IntRegIndex rm,
-                       IntRegIndex rs, uint32_t shiftAmt, ArmShiftType type,
+                       RegIndex rd, RegIndex rn, RegIndex rm,
+                       RegIndex rs, uint32_t shiftAmt, ArmShiftType type,
                        uint64_t imm) const;
 
     void
@@ -398,12 +398,7 @@ class ArmStaticInst : public StaticInst
         xc->pcState(pc);
     }
 
-    inline Fault
-    disabledFault() const
-    {
-        return std::make_shared<UndefinedInstruction>(machInst, false,
-                                                      mnemonic, true);
-    }
+    inline Fault disabledFault() const { return undefined(true); }
 
     // Utility function used by checkForWFxTrap32 and checkForWFxTrap64
     // Returns true if processor has to trap a WFI/WFE instruction.
@@ -586,6 +581,13 @@ class ArmStaticInst : public StaticInst
     getCurSveVecLen(ThreadContext *tc)
     {
         return getCurSveVecLenInBits(tc) / (8 * sizeof(T));
+    }
+
+    inline Fault
+    undefined(bool disabled=false) const
+    {
+        return std::make_shared<UndefinedInstruction>(
+            machInst, false, mnemonic, disabled);
     }
 };
 

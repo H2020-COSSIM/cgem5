@@ -63,15 +63,13 @@ namespace minor
 
 Execute::Execute(const std::string &name_,
     MinorCPU &cpu_,
-    const MinorCPUParams &params,
+    const BaseMinorCPUParams &params,
     Latch<ForwardInstData>::Output inp_,
     Latch<BranchData>::Input out_) :
     Named(name_),
     inp(inp_),
     out(out_),
     cpu(cpu_),
-    zeroReg(cpu.threads[0]->getIsaPtr()->regClasses().
-        at(IntRegClass).zeroReg()),
     issueLimit(params.executeIssueLimit),
     memoryIssueLimit(params.executeMemoryIssueLimit),
     commitLimit(params.executeCommitLimit),
@@ -90,8 +88,7 @@ Execute::Execute(const std::string &name_,
         params.executeLSQRequestsQueueSize,
         params.executeLSQTransfersQueueSize,
         params.executeLSQStoreBufferSize,
-        params.executeLSQMaxStoreBufferStoresPerCycle,
-        zeroReg),
+        params.executeLSQMaxStoreBufferStoresPerCycle),
     executeInfo(params.numThreads,
             ExecuteThreadInfo(params.executeCommitLimit)),
     interruptPriority(0),
@@ -332,7 +329,7 @@ Execute::handleMemResponse(MinorDynInstPtr inst,
     ThreadID thread_id = inst->id.threadId;
     ThreadContext *thread = cpu.getContext(thread_id);
 
-    ExecContext context(cpu, *cpu.threads[thread_id], *this, inst, zeroReg);
+    ExecContext context(cpu, *cpu.threads[thread_id], *this, inst);
 
     PacketPtr packet = response->packet;
 
@@ -467,8 +464,7 @@ Execute::executeMemRefInst(MinorDynInstPtr inst, BranchData &branch,
         ThreadContext *thread = cpu.getContext(inst->id.threadId);
         std::unique_ptr<PCStateBase> old_pc(thread->pcState().clone());
 
-        ExecContext context(cpu, *cpu.threads[inst->id.threadId],
-            *this, inst, zeroReg);
+        ExecContext context(cpu, *cpu.threads[inst->id.threadId], *this, inst);
 
         DPRINTF(MinorExecute, "Initiating memRef inst: %s\n", *inst);
 
@@ -787,8 +783,7 @@ Execute::issue(ThreadID thread_id)
             /* Generate MinorTrace's MinorInst lines.  Do this at commit
              *  to allow better instruction annotation? */
             if (debug::MinorTrace && !inst->isBubble()) {
-                inst->minorTraceInst(*this,
-                        cpu.threads[0]->getIsaPtr()->regClasses());
+                inst->minorTraceInst(*this);
             }
 
             /* Mark up barriers in the LSQ */
@@ -888,6 +883,39 @@ Execute::doInstCommitAccounting(MinorDynInstPtr inst)
     cpu.stats.committedInstType[inst->id.threadId]
                                [inst->staticInst->opClass()]++;
 
+    /** Add a count for every control instruction */
+    if (inst->staticInst->isControl()) {
+        if (inst->staticInst->isReturn()) {
+            cpu.stats.committedControl[inst->id.threadId]
+                        [gem5::StaticInstFlags::Flags::IsReturn]++;
+        }
+        if (inst->staticInst->isCall()) {
+            cpu.stats.committedControl[inst->id.threadId]
+                        [gem5::StaticInstFlags::Flags::IsCall]++;
+        }
+        if (inst->staticInst->isDirectCtrl()) {
+            cpu.stats.committedControl[inst->id.threadId]
+                        [gem5::StaticInstFlags::Flags::IsDirectControl]++;
+        }
+        if (inst->staticInst->isIndirectCtrl()) {
+            cpu.stats.committedControl[inst->id.threadId]
+                        [gem5::StaticInstFlags::Flags::IsIndirectControl]++;
+        }
+        if (inst->staticInst->isCondCtrl()) {
+            cpu.stats.committedControl[inst->id.threadId]
+                        [gem5::StaticInstFlags::Flags::IsCondControl]++;
+        }
+        if (inst->staticInst->isUncondCtrl()) {
+            cpu.stats.committedControl[inst->id.threadId]
+                        [gem5::StaticInstFlags::Flags::IsUncondControl]++;
+
+        }
+        cpu.stats.committedControl[inst->id.threadId]
+                        [gem5::StaticInstFlags::Flags::IsControl]++;
+    }
+
+
+
     /* Set the CP SeqNum to the numOps commit number */
     if (inst->traceData)
         inst->traceData->setCPSeq(thread->numOp);
@@ -914,8 +942,7 @@ Execute::commitInst(MinorDynInstPtr inst, bool early_memory_issue,
         panic("We should never hit the case where we try to commit from a "
               "suspended thread as the streamSeqNum should not match");
     } else if (inst->isFault()) {
-        ExecContext context(cpu, *cpu.threads[thread_id], *this,
-                inst, zeroReg);
+        ExecContext context(cpu, *cpu.threads[thread_id], *this, inst);
 
         DPRINTF(MinorExecute, "Fault inst reached Execute: %s\n",
             inst->fault->name());
@@ -976,8 +1003,7 @@ Execute::commitInst(MinorDynInstPtr inst, bool early_memory_issue,
          * backwards, so no other branches may evaluate this cycle*/
         completed_inst = false;
     } else {
-        ExecContext context(cpu, *cpu.threads[thread_id], *this,
-                inst, zeroReg);
+        ExecContext context(cpu, *cpu.threads[thread_id], *this, inst);
 
         DPRINTF(MinorExecute, "Committing inst: %s\n", *inst);
 

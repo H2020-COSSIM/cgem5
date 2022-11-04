@@ -30,7 +30,7 @@ import os
 from typing import List
 
 from ...utils.override import overrides
-from .abstract_board import AbstractBoard
+from .abstract_system_board import AbstractSystemBoard
 from .kernel_disk_workload import KernelDiskWorkload
 from ..processors.abstract_processor import AbstractProcessor
 from ..memory.abstract_memory_system import AbstractMemorySystem
@@ -38,7 +38,6 @@ from ..cachehierarchies.abstract_cache_hierarchy import AbstractCacheHierarchy
 from ...resources.resource import AbstractResource
 
 from ...isas import ISA
-from ...utils.requires import requires
 
 import m5
 
@@ -53,8 +52,6 @@ from m5.objects import (
     HiFive,
     GenericRiscvPciHost,
     IGbE_e1000,
-    EtherLink,
-    EtherDump,
     CowDiskImage,
     RawDiskImage,
     RiscvMmioVirtIO,
@@ -74,7 +71,7 @@ from m5.util.fdthelper import (
 )
 
 
-class RiscvBoard(AbstractBoard, KernelDiskWorkload):
+class RiscvBoard(AbstractSystemBoard, KernelDiskWorkload):
     """
     A board capable of full system simulation for RISC-V
 
@@ -94,9 +91,15 @@ class RiscvBoard(AbstractBoard, KernelDiskWorkload):
         cache_hierarchy: AbstractCacheHierarchy,
     ) -> None:
         super().__init__(clk_freq, processor, memory, cache_hierarchy)
-        requires(isa_required=ISA.RISCV)
 
-    @overrides(AbstractBoard)
+        if processor.get_isa() != ISA.RISCV:
+            raise Exception(
+                "The RISCVBoard requires a processor using the"
+                "RISCV ISA. Current processor ISA: "
+                f"'{processor.get_isa().name}'."
+            )
+
+    @overrides(AbstractSystemBoard)
     def _setup_board(self) -> None:
         self.workload = RiscvLinux()
 
@@ -138,22 +141,23 @@ class RiscvBoard(AbstractBoard, KernelDiskWorkload):
         self._on_chip_devices = [self.platform.clint, self.platform.plic]
         self._off_chip_devices = [self.platform.uart, self.disk, self.rng]
         
+        
     def readScript(self, script):
         self.readfile = script #COSSIM
 
     def _setup_io_devices(self) -> None:
         """Connect the I/O devices to the I/O bus"""
-        
-        #Add PCI
+        # Add PCI
         self.platform.pci_host.pio = self.iobus.mem_side_ports
 
-        #Add Ethernet card
-        self.ethernet = IGbE_e1000(pci_bus=0, pci_dev=0, pci_func=0,
-                                   InterruptLine=1, InterruptPin=1)
+        # Add Ethernet card
+        self.ethernet = IGbE_e1000(
+            pci_bus=0, pci_dev=0, pci_func=0, InterruptLine=1, InterruptPin=1
+        )
 
         self.ethernet.host = self.platform.pci_host
-        self.ethernet.pio  = self.iobus.mem_side_ports
-        self.ethernet.dma  = self.iobus.cpu_side_ports
+        self.ethernet.pio = self.iobus.mem_side_ports
+        self.ethernet.dma = self.iobus.cpu_side_ports
 
         if self.get_cache_hierarchy().is_ruby():
             for device in self._off_chip_devices + self._on_chip_devices:
@@ -174,11 +178,11 @@ class RiscvBoard(AbstractBoard, KernelDiskWorkload):
                 AddrRange(dev.pio_addr, size=dev.pio_size)
                 for dev in self._off_chip_devices
             ]
-            
-            #PCI
-            self.bridge.ranges.append(AddrRange(0x2F000000, size='16MB'))
-            self.bridge.ranges.append(AddrRange(0x30000000, size='256MB'))
-            self.bridge.ranges.append(AddrRange(0x40000000, size='512MB'))
+
+            # PCI
+            self.bridge.ranges.append(AddrRange(0x2F000000, size="16MB"))
+            self.bridge.ranges.append(AddrRange(0x30000000, size="256MB"))
+            self.bridge.ranges.append(AddrRange(0x40000000, size="512MB"))
 
     def _setup_pma(self) -> None:
         """Set the PMA devices on each core"""
@@ -187,11 +191,11 @@ class RiscvBoard(AbstractBoard, KernelDiskWorkload):
             AddrRange(dev.pio_addr, size=dev.pio_size)
             for dev in self._on_chip_devices + self._off_chip_devices
         ]
-        
-        #PCI
-        uncacheable_range.append(AddrRange(0x2F000000, size='16MB'))
-        uncacheable_range.append(AddrRange(0x30000000, size='256MB'))
-        uncacheable_range.append(AddrRange(0x40000000, size='512MB'))
+
+        # PCI
+        uncacheable_range.append(AddrRange(0x2F000000, size="16MB"))
+        uncacheable_range.append(AddrRange(0x30000000, size="256MB"))
+        uncacheable_range.append(AddrRange(0x40000000, size="512MB"))
 
         # TODO: Not sure if this should be done per-core like in the example
         for cpu in self.get_processor().get_cores():
@@ -199,34 +203,34 @@ class RiscvBoard(AbstractBoard, KernelDiskWorkload):
                 uncacheable=uncacheable_range
             )
 
-    @overrides(AbstractBoard)
+    @overrides(AbstractSystemBoard)
     def has_dma_ports(self) -> bool:
         return False
 
-    @overrides(AbstractBoard)
+    @overrides(AbstractSystemBoard)
     def get_dma_ports(self) -> List[Port]:
         raise NotImplementedError(
             "RISCVBoard does not have DMA Ports. "
             "Use `has_dma_ports()` to check this."
         )
 
-    @overrides(AbstractBoard)
+    @overrides(AbstractSystemBoard)
     def has_io_bus(self) -> bool:
         return True
 
-    @overrides(AbstractBoard)
+    @overrides(AbstractSystemBoard)
     def get_io_bus(self) -> IOXBar:
         return self.iobus
 
-    @overrides(AbstractBoard)
+    @overrides(AbstractSystemBoard)
     def has_coherent_io(self) -> bool:
         return True
 
-    @overrides(AbstractBoard)
+    @overrides(AbstractSystemBoard)
     def get_mem_side_coherent_io_port(self) -> Port:
         return self.iobus.mem_side_ports
 
-    @overrides(AbstractBoard)
+    @overrides(AbstractSystemBoard)
     def _setup_memory_ranges(self):
         memory = self.get_memory()
         mem_size = memory.get_size()
@@ -266,7 +270,7 @@ class RiscvBoard(AbstractBoard, KernelDiskWorkload):
         cpus_node.append(cpus_state.sizeCellsProperty())
         # Used by the CLINT driver to set the timer frequency. Value taken from
         # RISC-V kernel docs (Note: freedom-u540 is actually 1MHz)
-        cpus_node.append(FdtPropertyWords("timebase-frequency", [10000000]))
+        cpus_node.append(FdtPropertyWords("timebase-frequency", [100000000]))
 
         for i, core in enumerate(self.get_processor().get_cores()):
             node = FdtNode(f"cpu@{i}")
@@ -347,10 +351,11 @@ class RiscvBoard(AbstractBoard, KernelDiskWorkload):
         plic_node.appendCompatible(["riscv,plic0"])
 
         soc_node.append(plic_node)
-        
+
         # PCI
-        pci_state = FdtState(addr_cells=3, size_cells=2,
-                             cpu_cells=1, interrupt_cells=1)
+        pci_state = FdtState(
+            addr_cells=3, size_cells=2, cpu_cells=1, interrupt_cells=1
+        )
         pci_node = FdtNode("pci")
 
         if int(self.platform.pci_host.conf_device_bits) == 8:
@@ -367,9 +372,13 @@ class RiscvBoard(AbstractBoard, KernelDiskWorkload):
         pci_node.append(pci_state.sizeCellsProperty())
         pci_node.append(pci_state.interruptCellsProperty())
         # PCI address for CPU
-        pci_node.append(FdtPropertyWords("reg",
-            soc_state.addrCells(self.platform.pci_host.conf_base) +
-            soc_state.sizeCells(self.platform.pci_host.conf_size) ))
+        pci_node.append(
+            FdtPropertyWords(
+                "reg",
+                soc_state.addrCells(self.platform.pci_host.conf_base)
+                + soc_state.sizeCells(self.platform.pci_host.conf_size),
+            )
+        )
 
         # Ranges mapping
         # For now some of this is hard coded, because the PCI module does not
@@ -385,18 +394,19 @@ class RiscvBoard(AbstractBoard, KernelDiskWorkload):
         # AXI memory address range
         ranges += self.platform.pci_host.pciFdtAddr(space=2, addr=0)
         ranges += soc_state.addrCells(self.platform.pci_host.pci_mem_base)
-        ranges += pci_state.sizeCells(0x40000000) # Fixed size
+        ranges += pci_state.sizeCells(0x40000000)  # Fixed size
         pci_node.append(FdtPropertyWords("ranges", ranges))
 
         # Interrupt mapping
         plic_handle = int_state.phandle(plic)
-        int_base    = self.platform.pci_host.int_base
+        int_base = self.platform.pci_host.int_base
 
         interrupts = []
 
         for i in range(int(self.platform.pci_host.int_count)):
-            interrupts += self.platform.pci_host.pciFdtAddr(device=i,
-                addr=0) + [int(i) + 1, plic_handle, int(int_base) + i]
+            interrupts += self.platform.pci_host.pciFdtAddr(
+                device=i, addr=0
+            ) + [int(i) + 1, plic_handle, int(int_base) + i]
 
         pci_node.append(FdtPropertyWords("interrupt-map", interrupts))
 
@@ -404,8 +414,9 @@ class RiscvBoard(AbstractBoard, KernelDiskWorkload):
         if int_count & (int_count - 1):
             fatal("PCI interrupt count should be power of 2")
 
-        intmask = self.platform.pci_host.pciFdtAddr(device=int_count - 1,
-                                                    addr=0) + [0x0]
+        intmask = self.platform.pci_host.pciFdtAddr(
+            device=int_count - 1, addr=0
+        ) + [0x0]
         pci_node.append(FdtPropertyWords("interrupt-map-mask", intmask))
 
         if self.platform.pci_host._dma_coherent:

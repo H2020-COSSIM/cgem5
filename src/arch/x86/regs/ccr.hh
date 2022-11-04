@@ -35,27 +35,48 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef __ARCH_X86_CCREGS_HH__
-#define __ARCH_X86_CCREGS_HH__
+#ifndef __ARCH_X86_REGS_CCR_HH__
+#define __ARCH_X86_REGS_CCR_HH__
 
-#include "arch/x86/x86_traits.hh"
+#include "cpu/reg_class.hh"
+#include "debug/CCRegs.hh"
 
 namespace gem5
 {
-
 namespace X86ISA
 {
-    enum CCRegIndex
-    {
-        CCREG_ZAPS,
-        CCREG_CFOF,
-        CCREG_DF,
-        CCREG_ECF,
-        CCREG_EZF,
+namespace cc_reg
+{
 
-        NUM_CCREGS
-    };
+enum : RegIndex
+{
+    _ZapsIdx,
+    _CfofIdx,
+    _DfIdx,
+    _EcfIdx,
+    _EzfIdx,
+
+    NumRegs
+};
+
+} // namespace cc_reg
+
+inline constexpr RegClass ccRegClass(CCRegClass, CCRegClassName,
+        cc_reg::NumRegs, debug::CCRegs);
+
+namespace cc_reg
+{
+
+inline constexpr RegId
+    Zaps = ccRegClass[_ZapsIdx],
+    Cfof = ccRegClass[_CfofIdx],
+    Df = ccRegClass[_DfIdx],
+    Ecf = ccRegClass[_EcfIdx],
+    Ezf = ccRegClass[_EzfIdx];
+
+} // namespace cc_reg
+
 } // namespace X86ISA
 } // namespace gem5
 
-#endif // __ARCH_X86_CCREGS_HH__
+#endif // __ARCH_X86_REGS_CCR_HH__

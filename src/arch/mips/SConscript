@@ -29,6 +29,9 @@
 
 Import('*')
 
+if env['USE_MIPS_ISA']:
+    env.TagImplies('mips isa', 'gem5 lib')
+
 Source('decoder.cc', tags='mips isa')
 Source('dsp.cc', tags='mips isa')
 Source('faults.cc', tags='mips isa')
@@ -50,6 +53,8 @@ SimObject('MipsMMU.py', sim_objects=['MipsMMU'], tags='mips isa')
 SimObject('MipsSeWorkload.py', sim_objects=['MipsSEWorkload', 'MipsEmuLinux'],
     tags='mips isa')
 SimObject('MipsTLB.py', sim_objects=['MipsTLB'], tags='mips isa')
+
+SimObject('MipsCPU.py', sim_objects=[], tags='mips isa')
 
 DebugFlag('MipsPRA', tags='mips isa')
 

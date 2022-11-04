@@ -1,3 +1,2 @@
-TARGET_ISA = 'null'
-CPU_MODELS = ''
+USE_NULL_ISA = True
 PROTOCOL = 'Garnet_standalone'

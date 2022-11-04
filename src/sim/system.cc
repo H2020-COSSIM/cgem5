@@ -49,15 +49,7 @@
 #include "base/loader/symtab.hh"
 #include "base/str.hh"
 #include "base/trace.hh"
-#include "config/the_isa.hh"
-#include "config/use_kvm.hh"
-#if USE_KVM
-#include "cpu/kvm/base.hh"
-#include "cpu/kvm/vm.hh"
-#endif
-#if !IS_NULL_ISA
 #include "cpu/base.hh"
-#endif
 #include "cpu/thread_context.hh"
 #include "debug/Loader.hh"
 #include "debug/Quiesce.hh"
@@ -78,10 +70,8 @@ std::vector<System *> System::systemList;
 void
 System::Threads::Thread::resume()
 {
-#   if !IS_NULL_ISA
     DPRINTFS(Quiesce, context->getCpuPtr(), "activating\n");
     context->activate();
-#   endif
 }
 
 std::string
@@ -100,31 +90,18 @@ System::Threads::Thread::quiesce() const
 }
 
 void
-System::Threads::insert(ThreadContext *tc, ContextID id)
+System::Threads::insert(ThreadContext *tc)
 {
-    if (id == InvalidContextID) {
-        for (id = 0; id < size(); id++) {
-            if (!threads[id].context)
-                break;
-        }
-    }
-
+    ContextID id = size();
     tc->setContextId(id);
 
-    if (id >= size())
-        threads.resize(id + 1);
-
-    fatal_if(threads[id].context,
-            "Cannot have two thread contexts with the same id (%d).", id);
-
-    auto *sys = tc->getSystemPtr();
-
-    auto &t = thread(id);
+    auto &t = threads.emplace_back();
     t.context = tc;
     // Look up this thread again on resume, in case the threads vector has
     // been reallocated.
     t.resumeEvent = new EventFunctionWrapper(
-            [this, id](){ thread(id).resume(); }, sys->name());
+            [this, id](){ thread(id).resume(); },
+            tc->getSystemPtr()->name());
 }
 
 void
@@ -132,13 +109,11 @@ System::Threads::replace(ThreadContext *tc, ContextID id)
 {
     auto &t = thread(id);
     panic_if(!t.context, "Can't replace a context which doesn't exist.");
-#   if !IS_NULL_ISA
     if (t.resumeEvent->scheduled()) {
         Tick when = t.resumeEvent->when();
         t.context->getCpuPtr()->deschedule(t.resumeEvent);
         tc->getCpuPtr()->schedule(t.resumeEvent, when);
     }
-#   endif
     t.context = tc;
 }
 
@@ -170,17 +145,14 @@ void
 System::Threads::quiesce(ContextID id)
 {
     auto &t = thread(id);
-#   if !IS_NULL_ISA
     [[maybe_unused]] BaseCPU *cpu = t.context->getCpuPtr();
     DPRINTFS(Quiesce, cpu, "quiesce()\n");
-#   endif
     t.quiesce();
 }
 
 void
 System::Threads::quiesceTick(ContextID id, Tick when)
 {
-#   if !IS_NULL_ISA
     auto &t = thread(id);
     BaseCPU *cpu = t.context->getCpuPtr();
 
@@ -188,7 +160,6 @@ System::Threads::quiesceTick(ContextID id, Tick when)
     t.quiesce();
 
     cpu->reschedule(t.resumeEvent, when, true);
-#   endif
 }
 
 int System::numSystemsRunning = 0;
@@ -199,11 +170,8 @@ System::System(const Params &p)
       init_param(p.init_param),
       physProxy(_systemPort, p.cache_line_size),
       workload(p.workload),
-#if USE_KVM
-      kvmVM(p.kvm_vm),
-#endif
       physmem(name() + ".physmem", p.memories, p.mmap_using_noreserve,
-              p.shared_backstore),
+              p.shared_backstore, p.auto_unlink_shared_backstore),
       ShadowRomRanges(p.shadow_rom_ranges.begin(),
                       p.shadow_rom_ranges.end()),
       memoryMode(p.mem_mode),
@@ -221,12 +189,6 @@ System::System(const Params &p)
 
     // add self to global system list
     systemList.push_back(this);
-
-#if USE_KVM
-    if (kvmVM) {
-        kvmVM->setSystem(this);
-    }
-#endif
 
     // check if the cache line size is a value known to work
     if (_cacheLineSize != 16 && _cacheLineSize != 32 &&
@@ -272,9 +234,9 @@ System::setMemoryMode(enums::MemoryMode mode)
 }
 
 void
-System::registerThreadContext(ThreadContext *tc, ContextID assigned)
+System::registerThreadContext(ThreadContext *tc)
 {
-    threads.insert(tc, assigned);
+    threads.insert(tc);
 
     workload->registerThreadContext(tc);
 
@@ -314,24 +276,6 @@ System::replaceThreadContext(ThreadContext *tc, ContextID context_id)
         otc->remove(e);
         tc->schedule(e);
     }
-}
-
-bool
-System::validKvmEnvironment() const
-{
-#if USE_KVM
-    if (threads.empty())
-        return false;
-
-    for (auto *tc: threads) {
-        if (!dynamic_cast<BaseKvmCPU *>(tc->getCpuPtr()))
-            return false;
-    }
-
-    return true;
-#else
-    return false;
-#endif
 }
 
 Addr
@@ -406,9 +350,7 @@ System::unserialize(CheckpointIn &cp)
                 !when || !t.resumeEvent) {
             continue;
         }
-#       if !IS_NULL_ISA
         t.context->getCpuPtr()->schedule(t.resumeEvent, when);
-#       endif
     }
 
     // also unserialize the memories in the system

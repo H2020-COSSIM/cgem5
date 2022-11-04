@@ -33,20 +33,28 @@
 # (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-microcode = '''
+microcode = """
 def macroop PUSHF {
     .adjust_env oszIn64Override
 
     rflags t1
-    st t1, ss, [1, t0, rsp], "-env.stackSize", dataSize=ssz
-    subi rsp, rsp, ssz
+    st t1, ss, [1, t0, rsp], "-env.dataSize", addressSize=ssz
+    subi rsp, rsp, dsz, dataSize=ssz
+};
+
+def macroop PUSHF_VIRT {
+    panic "Virtual mode pushf isn't implemented!"
 };
 
 def macroop POPF {
     .adjust_env oszIn64Override
 
-    ld t1, ss, [1, t0, rsp], dataSize=ssz
-    addi rsp, rsp, ssz
+    ld t1, ss, [1, t0, rsp], addressSize=ssz
+    addi rsp, rsp, dsz, dataSize=ssz
     wrflags t1, t0
 };
-'''
+
+def macroop POPF_VIRT {
+    panic "Virtual mode popf isn't implemented!"
+};
+"""

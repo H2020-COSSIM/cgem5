@@ -1,3 +1,2 @@
-TARGET_ISA = 'power'
-CPU_MODELS = 'AtomicSimpleCPU,TimingSimpleCPU,O3CPU'
+USE_POWER_ISA = True
 PROTOCOL = 'MI_example'

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2019 ARM Limited
+ * Copyright (c) 2019, 2021-2022 Arm Limited
  * All rights reserved
  *
  * The license below extends only to copyright in the software and shall
@@ -81,8 +81,9 @@ Gicv3CPUInterface::resetHppi(uint32_t intid)
 }
 
 void
-Gicv3CPUInterface::setThreadContext(ThreadContext *tc)
+Gicv3CPUInterface::setThreadContext(ThreadContext *_tc)
 {
+    tc = _tc;
     maintenanceInterrupt = gic->params().maint_int->get(tc);
     fatal_if(maintenanceInterrupt->num() >= redistributor->irqPending.size(),
         "Invalid maintenance interrupt number\n");
@@ -91,7 +92,7 @@ Gicv3CPUInterface::setThreadContext(ThreadContext *tc)
 bool
 Gicv3CPUInterface::getHCREL2FMO() const
 {
-    HCR hcr = isa->readMiscRegNoEffect(MISCREG_HCR_EL2);
+    HCR hcr = tc->readMiscRegNoEffect(MISCREG_HCR_EL2);
 
     if (hcr.tge && hcr.e2h) {
         return false;
@@ -105,7 +106,7 @@ Gicv3CPUInterface::getHCREL2FMO() const
 bool
 Gicv3CPUInterface::getHCREL2IMO() const
 {
-    HCR hcr = isa->readMiscRegNoEffect(MISCREG_HCR_EL2);
+    HCR hcr = tc->readMiscRegNoEffect(MISCREG_HCR_EL2);
 
     if (hcr.tge && hcr.e2h) {
         return false;
@@ -230,7 +231,7 @@ Gicv3CPUInterface::readMiscReg(int misc_reg)
           uint8_t rprio = highestActivePriority();
 
           if (haveEL(EL3) && !inSecureState() &&
-              (isa->readMiscRegNoEffect(MISCREG_SCR_EL3) & (1U << 2))) {
+              (tc->readMiscRegNoEffect(MISCREG_SCR_EL3) & (1U << 2))) {
               // Spec section 4.8.1
               // For Non-secure access to ICC_RPR_EL1 when SCR_EL3.FIQ == 1
               if ((rprio & 0x80) == 0) {
@@ -366,7 +367,7 @@ Gicv3CPUInterface::readMiscReg(int misc_reg)
         }
 
         if (haveEL(EL3) && !inSecureState() &&
-            (isa->readMiscRegNoEffect(MISCREG_SCR_EL3) & (1U << 2))) {
+            (tc->readMiscRegNoEffect(MISCREG_SCR_EL3) & (1U << 2))) {
             // Spec section 4.8.1
             // For Non-secure access to ICC_PMR_EL1 when SCR_EL3.FIQ == 1:
             if ((value & 0x80) == 0) {
@@ -968,7 +969,7 @@ Gicv3CPUInterface::setMiscReg(int misc_reg, RegVal val)
           bool irq_is_grp0 = group == Gicv3::G0S;
           bool single_sec_state = distributor->DS;
           bool irq_is_secure = !single_sec_state && (group != Gicv3::G1NS);
-          SCR scr_el3 = isa->readMiscRegNoEffect(MISCREG_SCR_EL3);
+          SCR scr_el3 = tc->readMiscRegNoEffect(MISCREG_SCR_EL3);
           bool route_fiq_to_el3 = scr_el3.fiq;
           bool route_irq_to_el3 = scr_el3.irq;
           bool route_fiq_to_el2 = hcr_fmo;
@@ -1290,7 +1291,7 @@ Gicv3CPUInterface::setMiscReg(int misc_reg, RegVal val)
           }
 
           val &= 0xff;
-          SCR scr_el3 = isa->readMiscRegNoEffect(MISCREG_SCR_EL3);
+          SCR scr_el3 = tc->readMiscRegNoEffect(MISCREG_SCR_EL3);
 
           if (haveEL(EL3) && !inSecureState() && (scr_el3.fiq)) {
               // Spec section 4.8.1
@@ -2032,6 +2033,9 @@ Gicv3CPUInterface::updateDistributor()
 void
 Gicv3CPUInterface::update()
 {
+    if (gic->blockIntUpdate())
+        return;
+
     bool signal_IRQ = false;
     bool signal_FIQ = false;
 
@@ -2066,6 +2070,9 @@ Gicv3CPUInterface::update()
 void
 Gicv3CPUInterface::virtualUpdate()
 {
+    if (gic->blockIntUpdate())
+        return;
+
     bool signal_IRQ = false;
     bool signal_FIQ = false;
     int lr_idx = getHPPVILR();
@@ -2333,13 +2340,13 @@ Gicv3CPUInterface::groupEnabled(Gicv3::GroupId group) const
 bool
 Gicv3CPUInterface::inSecureState() const
 {
-    return isa->inSecureState();
+    return ArmISA::isSecure(tc);
 }
 
 ExceptionLevel
 Gicv3CPUInterface::currEL() const
 {
-    return isa->currEL();
+    return ArmISA::currEL(tc);
 }
 
 bool
@@ -2365,32 +2372,19 @@ Gicv3CPUInterface::haveEL(ExceptionLevel el) const
 bool
 Gicv3CPUInterface::isSecureBelowEL3() const
 {
-    SCR scr = isa->readMiscRegNoEffect(MISCREG_SCR_EL3);
-    return haveEL(EL3) && scr.ns == 0;
+    return ArmISA::isSecureBelowEL3(tc);
 }
 
 bool
 Gicv3CPUInterface::isAA64() const
 {
-    CPSR cpsr = isa->readMiscRegNoEffect(MISCREG_CPSR);
-    return opModeIs64((OperatingMode)(uint8_t) cpsr.mode);
+    return ArmISA::inAArch64(tc);
 }
 
 bool
 Gicv3CPUInterface::isEL3OrMon() const
 {
-    if (haveEL(EL3)) {
-        CPSR cpsr = isa->readMiscRegNoEffect(MISCREG_CPSR);
-        bool is_64 = opModeIs64((OperatingMode)(uint8_t) cpsr.mode);
-
-        if (is_64 && (cpsr.el == EL3)) {
-            return true;
-        } else if (!is_64 && (cpsr.mode == MODE_MON)) {
-            return true;
-        }
-    }
-
-    return false;
+    return currEL() == EL3;
 }
 
 // Computes ICH_EISR_EL2
@@ -2584,6 +2578,29 @@ Gicv3CPUInterface::deassertWakeRequest()
 {
     auto *tc = gic->getSystem()->threads[cpuId];
     ArmSystem::callClearWakeRequest(tc);
+}
+
+void
+Gicv3CPUInterface::copy(Gicv3Registers *from, Gicv3Registers *to)
+{
+    const auto affinity = redistributor->getAffinity();
+    gic->copyCpuRegister(from, to, affinity, MISCREG_ICC_PMR_EL1);
+
+    gic->copyCpuRegister(from, to, affinity, MISCREG_ICC_AP1R0_EL1);
+    if (PRIORITY_BITS >= 6) {
+        gic->copyCpuRegister(from, to, affinity, MISCREG_ICC_AP1R1_EL1);
+    }
+
+    if (PRIORITY_BITS >= 7) {
+        gic->copyCpuRegister(from, to, affinity, MISCREG_ICC_AP1R2_EL1);
+        gic->copyCpuRegister(from, to, affinity, MISCREG_ICC_AP1R3_EL1);
+    }
+
+    gic->copyCpuRegister(from, to, affinity, MISCREG_ICC_BPR1_EL1);
+    gic->copyCpuRegister(from, to, affinity, MISCREG_ICC_CTLR_EL1);
+    gic->copyCpuRegister(from, to, affinity, MISCREG_ICC_SRE_EL1);
+    gic->copyCpuRegister(from, to, affinity, MISCREG_ICC_IGRPEN0_EL1);
+    gic->copyCpuRegister(from, to, affinity, MISCREG_ICC_IGRPEN1_EL1);
 }
 
 void

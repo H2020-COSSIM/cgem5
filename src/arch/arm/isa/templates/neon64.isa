@@ -52,7 +52,7 @@ class %(class_name)s : public %(base_class)s
   public:
     // Constructor
     %(class_name)s(ExtMachInst machInst,
-                   IntRegIndex _dest, IntRegIndex _op1, IntRegIndex _op2) :
+                   RegIndex _dest, RegIndex _op1, RegIndex _op2) :
         %(base_class)s("%(mnemonic)s", machInst, %(op_class)s,
                        _dest, _op1, _op2)
     {
@@ -60,7 +60,7 @@ class %(class_name)s : public %(base_class)s
         %(constructor)s;
     }
 
-    Fault execute(ExecContext *, Trace::InstRecord *) const override;
+    Fault execute(ExecContext *, trace::InstRecord *) const override;
 };
 }};
 
@@ -77,7 +77,7 @@ class %(class_name)s : public %(base_class)s
   public:
     // Constructor
     %(class_name)s(ExtMachInst machInst,
-                   IntRegIndex _dest, IntRegIndex _op1, IntRegIndex _op2,
+                   RegIndex _dest, RegIndex _op1, RegIndex _op2,
                    uint64_t _imm) :
         %(base_class)s("%(mnemonic)s", machInst, %(op_class)s,
                        _dest, _op1, _op2, _imm)
@@ -86,7 +86,7 @@ class %(class_name)s : public %(base_class)s
         %(constructor)s;
     }
 
-    Fault execute(ExecContext *, Trace::InstRecord *) const override;
+    Fault execute(ExecContext *, trace::InstRecord *) const override;
 };
 }};
 
@@ -102,14 +102,14 @@ class %(class_name)s : public %(base_class)s
 
   public:
     // Constructor
-    %(class_name)s(ExtMachInst machInst, IntRegIndex _dest, IntRegIndex _op1) :
+    %(class_name)s(ExtMachInst machInst, RegIndex _dest, RegIndex _op1) :
         %(base_class)s("%(mnemonic)s", machInst, %(op_class)s, _dest, _op1)
     {
         %(set_reg_idx_arr)s;
         %(constructor)s;
     }
 
-    Fault execute(ExecContext *, Trace::InstRecord *) const override;
+    Fault execute(ExecContext *, trace::InstRecord *) const override;
 };
 }};
 
@@ -126,7 +126,7 @@ class %(class_name)s : public %(base_class)s
   public:
     // Constructor
     %(class_name)s(ExtMachInst machInst,
-                   IntRegIndex _dest, IntRegIndex _op1, uint64_t _imm) :
+                   RegIndex _dest, RegIndex _op1, uint64_t _imm) :
         %(base_class)s("%(mnemonic)s", machInst, %(op_class)s,
                        _dest, _op1, _imm)
     {
@@ -134,7 +134,7 @@ class %(class_name)s : public %(base_class)s
         %(constructor)s;
     }
 
-    Fault execute(ExecContext *, Trace::InstRecord *) const override;
+    Fault execute(ExecContext *, trace::InstRecord *) const override;
 };
 }};
 
@@ -151,7 +151,7 @@ class %(class_name)s : public %(base_class)s
   public:
     // Constructor
     %(class_name)s(ExtMachInst machInst,
-                   IntRegIndex _dest, IntRegIndex _op1, uint64_t _imm1,
+                   RegIndex _dest, RegIndex _op1, uint64_t _imm1,
                    uint64_t _imm2) :
         %(base_class)s("%(mnemonic)s", machInst, %(op_class)s,
                        _dest, _op1, _imm1, _imm2)
@@ -160,7 +160,7 @@ class %(class_name)s : public %(base_class)s
         %(constructor)s;
     }
 
-    Fault execute(ExecContext *, Trace::InstRecord *) const override;
+    Fault execute(ExecContext *, trace::InstRecord *) const override;
 };
 }};
 
@@ -176,28 +176,28 @@ class %(class_name)s : public %(base_class)s
 
   public:
     // Constructor
-    %(class_name)s(ExtMachInst machInst, IntRegIndex _dest, uint64_t _imm) :
+    %(class_name)s(ExtMachInst machInst, RegIndex _dest, uint64_t _imm) :
         %(base_class)s("%(mnemonic)s", machInst, %(op_class)s, _dest, _imm)
     {
         %(set_reg_idx_arr)s;
         %(constructor)s;
     }
 
-    Fault execute(ExecContext *, Trace::InstRecord *) const override;
+    Fault execute(ExecContext *, trace::InstRecord *) const override;
 };
 }};
 
 def template NeonXExecDeclare {{
     template
     Fault %(class_name)s<%(targs)s>::execute(
-            ExecContext *, Trace::InstRecord *) const;
+            ExecContext *, trace::InstRecord *) const;
 }};
 
 def template NeonXEqualRegOpExecute {{
     template <class Element>
     Fault
     %(class_name)s<Element>::execute(ExecContext *xc,
-            Trace::InstRecord *traceData) const
+            trace::InstRecord *traceData) const
     {
         Fault fault = NoFault;
         %(op_decl)s;
@@ -232,7 +232,7 @@ def template NeonXUnequalRegOpExecute {{
     template <class Element>
     Fault
     %(class_name)s<Element>::execute(ExecContext *xc,
-            Trace::InstRecord *traceData) const
+            trace::InstRecord *traceData) const
     {
         typedef typename bigger_type_t<Element>::type BigElement;
         Fault fault = NoFault;
@@ -299,17 +299,17 @@ def template MicroNeonMemDeclare64 {{
             %(constructor)s;
         }
 
-        Fault execute(ExecContext *, Trace::InstRecord *) const override;
-        Fault initiateAcc(ExecContext *, Trace::InstRecord *) const override;
+        Fault execute(ExecContext *, trace::InstRecord *) const override;
+        Fault initiateAcc(ExecContext *, trace::InstRecord *) const override;
         Fault completeAcc(PacketPtr, ExecContext *,
-                          Trace::InstRecord *) const override;
+                          trace::InstRecord *) const override;
     };
 }};
 
 def template NeonLoadExecute64 {{
     Fault
     %(class_name)s::execute(
-            ExecContext *xc, Trace::InstRecord *traceData) const
+            ExecContext *xc, trace::InstRecord *traceData) const
     {
         Addr EA;
         Fault fault = NoFault;
@@ -340,7 +340,7 @@ def template NeonLoadExecute64 {{
 def template NeonLoadInitiateAcc64 {{
     Fault
     %(class_name)s::initiateAcc(
-        ExecContext *xc, Trace::InstRecord *traceData) const
+        ExecContext *xc, trace::InstRecord *traceData) const
     {
         Addr EA;
         Fault fault = NoFault;
@@ -362,7 +362,7 @@ def template NeonLoadInitiateAcc64 {{
 def template NeonLoadCompleteAcc64 {{
     Fault
     %(class_name)s::completeAcc(
-        PacketPtr pkt, ExecContext *xc, Trace::InstRecord *traceData) const
+        PacketPtr pkt, ExecContext *xc, trace::InstRecord *traceData) const
     {
         Fault fault = NoFault;
 
@@ -388,7 +388,7 @@ def template NeonLoadCompleteAcc64 {{
 def template NeonStoreExecute64 {{
     Fault
     %(class_name)s::execute(
-        ExecContext *xc, Trace::InstRecord *traceData) const
+        ExecContext *xc, trace::InstRecord *traceData) const
     {
         Addr EA;
         Fault fault = NoFault;
@@ -422,7 +422,7 @@ def template NeonStoreExecute64 {{
 def template NeonStoreInitiateAcc64 {{
     Fault
     %(class_name)s::initiateAcc(
-        ExecContext *xc, Trace::InstRecord *traceData) const
+        ExecContext *xc, trace::InstRecord *traceData) const
     {
         Addr EA;
         Fault fault = NoFault;
@@ -450,7 +450,7 @@ def template NeonStoreInitiateAcc64 {{
 def template NeonStoreCompleteAcc64 {{
     Fault
     %(class_name)s::completeAcc(
-        PacketPtr pkt, ExecContext *xc, Trace::InstRecord *traceData) const
+        PacketPtr pkt, ExecContext *xc, trace::InstRecord *traceData) const
     {
         return NoFault;
     }
@@ -533,7 +533,7 @@ def template MicroNeonMixDeclare64 {{
             %(constructor)s;
         }
 
-        Fault execute(ExecContext *, Trace::InstRecord *) const override;
+        Fault execute(ExecContext *, trace::InstRecord *) const override;
     };
 }};
 
@@ -556,14 +556,14 @@ def template MicroNeonMixLaneDeclare64 {{
             %(constructor)s;
         }
 
-        Fault execute(ExecContext *, Trace::InstRecord *) const override;
+        Fault execute(ExecContext *, trace::InstRecord *) const override;
     };
 }};
 
 def template MicroNeonMixExecute64 {{
     Fault
     %(class_name)s::execute(
-            ExecContext *xc, Trace::InstRecord *traceData) const
+            ExecContext *xc, trace::InstRecord *traceData) const
     {
         Fault fault = NoFault;
         uint64_t resTemp = 0;

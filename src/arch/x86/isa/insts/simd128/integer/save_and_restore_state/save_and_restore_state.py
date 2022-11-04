@@ -29,46 +29,47 @@
 #  t7 == base address (RIP or SIB)
 
 
-loadX87RegTemplate =  '''
+loadX87RegTemplate = """
     ld t1, seg, %(mode)s, "DISPLACEMENT + 32 + 16 * %(idx)i", dataSize=8
     ld t2, seg, %(mode)s, "DISPLACEMENT + 32 + 16 * %(idx)i + 8", dataSize=2
     cvtint_fp80 st(%(idx)i), t1, t2
-'''
+"""
 
-storeX87RegTemplate = '''
+storeX87RegTemplate = """
     cvtfp80h_int t1, st(%(idx)i)
     cvtfp80l_int t2, st(%(idx)i)
     st t1, seg, %(mode)s, "DISPLACEMENT + 32 + 16 * %(idx)i", dataSize=8
     st t2, seg, %(mode)s, "DISPLACEMENT + 32 + 16 * %(idx)i + 8", dataSize=2
-'''
+"""
 
-loadXMMRegTemplate =  '''
-    ldfp fpRegIdx("FLOATREG_XMM_LOW(%(idx)i)"), seg, %(mode)s, \
+loadXMMRegTemplate = """
+    ldfp fpRegIdx("float_reg::xmmLow(%(idx)i)"), seg, %(mode)s, \
          "DISPLACEMENT + 160 + 16 * %(idx)i", dataSize=8
-    ldfp fpRegIdx("FLOATREG_XMM_HIGH(%(idx)i)"), seg, %(mode)s, \
+    ldfp fpRegIdx("float_reg::xmmHigh(%(idx)i)"), seg, %(mode)s, \
          "DISPLACEMENT + 160 + 16 * %(idx)i + 8", dataSize=8
-'''
+"""
 
-storeXMMRegTemplate =  '''
-    stfp fpRegIdx("FLOATREG_XMM_LOW(%(idx)i)"), seg, %(mode)s, \
+storeXMMRegTemplate = """
+    stfp fpRegIdx("float_reg::xmmLow(%(idx)i)"), seg, %(mode)s, \
          "DISPLACEMENT + 160 + 16 * %(idx)i", dataSize=8
-    stfp fpRegIdx("FLOATREG_XMM_HIGH(%(idx)i)"), seg, %(mode)s, \
+    stfp fpRegIdx("float_reg::xmmHigh(%(idx)i)"), seg, %(mode)s, \
          "DISPLACEMENT + 160 + 16 * %(idx)i + 8", dataSize=8
-'''
+"""
 
-loadAllDataRegs = \
-    "".join([loadX87RegTemplate % { "idx" : i, "mode" : "%(mode)s" }
-             for i in range(8)]) + \
-    "".join([loadXMMRegTemplate % { "idx" : i, "mode" : "%(mode)s" }
-             for i in range(16)])
+loadAllDataRegs = "".join(
+    [loadX87RegTemplate % {"idx": i, "mode": "%(mode)s"} for i in range(8)]
+) + "".join(
+    [loadXMMRegTemplate % {"idx": i, "mode": "%(mode)s"} for i in range(16)]
+)
 
-storeAllDataRegs = \
-    "".join([storeX87RegTemplate % { "idx" : i, "mode" : "%(mode)s" }
-             for i in range(8)]) + \
-    "".join([storeXMMRegTemplate % { "idx" : i, "mode" : "%(mode)s" }
-             for i in range(16)])
+storeAllDataRegs = "".join(
+    [storeX87RegTemplate % {"idx": i, "mode": "%(mode)s"} for i in range(8)]
+) + "".join(
+    [storeXMMRegTemplate % {"idx": i, "mode": "%(mode)s"} for i in range(16)]
+)
 
-fxsaveCommonTemplate = """
+fxsaveCommonTemplate = (
+    """
     rdval t1, fcw
     st t1, seg, %(mode)s, "DISPLACEMENT + 0", dataSize=2
 
@@ -80,40 +81,49 @@ fxsaveCommonTemplate = """
     rdxftw t1
     st t1, seg, %(mode)s, "DISPLACEMENT + 4", dataSize=1
 
-    rdval t1, ctrlRegIdx("MISCREG_FOP")
+    rdval t1, ctrlRegIdx("misc_reg::Fop")
     st t1, seg, %(mode)s, "DISPLACEMENT + 6", dataSize=2
 
-    rdval t1, ctrlRegIdx("MISCREG_MXCSR")
+    rdval t1, ctrlRegIdx("misc_reg::Mxcsr")
     st t1, seg, %(mode)s, "DISPLACEMENT + 16 + 8", dataSize=4
 
     # MXCSR_MASK, software assumes the default (0xFFBF) if 0.
     limm t1, 0xFFFF
     st t1, seg, %(mode)s, "DISPLACEMENT + 16 + 12", dataSize=4
-""" + storeAllDataRegs
+"""
+    + storeAllDataRegs
+)
 
-fxsave32Template = """
-    rdval t1, ctrlRegIdx("MISCREG_FIOFF")
+fxsave32Template = (
+    """
+    rdval t1, ctrlRegIdx("misc_reg::Fioff")
     st t1, seg, %(mode)s, "DISPLACEMENT + 8", dataSize=4
 
-    rdval t1, ctrlRegIdx("MISCREG_FISEG")
+    rdval t1, ctrlRegIdx("misc_reg::Fiseg")
     st t1, seg, %(mode)s, "DISPLACEMENT + 12", dataSize=2
 
-    rdval t1, ctrlRegIdx("MISCREG_FOOFF")
+    rdval t1, ctrlRegIdx("misc_reg::Fooff")
     st t1, seg, %(mode)s, "DISPLACEMENT + 16 + 0", dataSize=4
 
-    rdval t1, ctrlRegIdx("MISCREG_FOSEG")
+    rdval t1, ctrlRegIdx("misc_reg::Foseg")
     st t1, seg, %(mode)s, "DISPLACEMENT + 16 + 4", dataSize=2
-""" + fxsaveCommonTemplate
+"""
+    + fxsaveCommonTemplate
+)
 
-fxsave64Template = """
-    rdval t1, ctrlRegIdx("MISCREG_FIOFF")
+fxsave64Template = (
+    """
+    rdval t1, ctrlRegIdx("misc_reg::Fioff")
     st t1, seg, %(mode)s, "DISPLACEMENT + 8", dataSize=8
 
-    rdval t1, ctrlRegIdx("MISCREG_FOOFF")
+    rdval t1, ctrlRegIdx("misc_reg::Fooff")
     st t1, seg, %(mode)s, "DISPLACEMENT + 16 + 0", dataSize=8
-""" + fxsaveCommonTemplate
+"""
+    + fxsaveCommonTemplate
+)
 
-fxrstorCommonTemplate = """
+fxrstorCommonTemplate = (
+    """
     ld t1, seg, %(mode)s, "DISPLACEMENT + 0", dataSize=2
     wrval fcw, t1
 
@@ -126,72 +136,98 @@ fxrstorCommonTemplate = """
     wrxftw t1
 
     ld t1, seg, %(mode)s, "DISPLACEMENT + 6", dataSize=2
-    wrval ctrlRegIdx("MISCREG_FOP"), t1
+    wrval ctrlRegIdx("misc_reg::Fop"), t1
 
     ld t1, seg, %(mode)s, "DISPLACEMENT + 16 + 8", dataSize=4
-    wrval ctrlRegIdx("MISCREG_MXCSR"), t1
-""" + loadAllDataRegs
+    wrval ctrlRegIdx("misc_reg::Mxcsr"), t1
+"""
+    + loadAllDataRegs
+)
 
-fxrstor32Template = """
+fxrstor32Template = (
+    """
     ld t1, seg, %(mode)s, "DISPLACEMENT + 8", dataSize=4
-    wrval ctrlRegIdx("MISCREG_FIOFF"), t1
+    wrval ctrlRegIdx("misc_reg::Fioff"), t1
 
     ld t1, seg, %(mode)s, "DISPLACEMENT + 12", dataSize=2
-    wrval ctrlRegIdx("MISCREG_FISEG"), t1
+    wrval ctrlRegIdx("misc_reg::Fiseg"), t1
 
     ld t1, seg, %(mode)s, "DISPLACEMENT + 16 + 0", dataSize=4
-    wrval ctrlRegIdx("MISCREG_FOOFF"), t1
+    wrval ctrlRegIdx("misc_reg::Fooff"), t1
 
     ld t1, seg, %(mode)s, "DISPLACEMENT + 16 + 4", dataSize=2
-    wrval ctrlRegIdx("MISCREG_FOSEG"), t1
-""" + fxrstorCommonTemplate
+    wrval ctrlRegIdx("misc_reg::Foseg"), t1
+"""
+    + fxrstorCommonTemplate
+)
 
-fxrstor64Template = """
+fxrstor64Template = (
+    """
     limm t2, 0, dataSize=8
 
     ld t1, seg, %(mode)s, "DISPLACEMENT + 8", dataSize=8
-    wrval ctrlRegIdx("MISCREG_FIOFF"), t1
-    wrval ctrlRegIdx("MISCREG_FISEG"), t2
+    wrval ctrlRegIdx("misc_reg::Fioff"), t1
+    wrval ctrlRegIdx("misc_reg::Fiseg"), t2
 
     ld t1, seg, %(mode)s, "DISPLACEMENT + 16 + 0", dataSize=8
-    wrval ctrlRegIdx("MISCREG_FOOFF"), t1
-    wrval ctrlRegIdx("MISCREG_FOSEG"), t2
-""" + fxrstorCommonTemplate
+    wrval ctrlRegIdx("misc_reg::Fooff"), t1
+    wrval ctrlRegIdx("misc_reg::Foseg"), t2
+"""
+    + fxrstorCommonTemplate
+)
 
-microcode = '''
+microcode = (
+    """
 def macroop FXSAVE_M {
-''' + fxsave32Template % { "mode" : "sib" } + '''
+"""
+    + fxsave32Template % {"mode": "sib"}
+    + """
 };
 
 def macroop FXSAVE_P {
     rdip t7
-''' + fxsave32Template % { "mode" : "riprel" } + '''
+"""
+    + fxsave32Template % {"mode": "riprel"}
+    + """
 };
 
 def macroop FXSAVE64_M {
-''' + fxsave64Template % { "mode" : "sib" } + '''
+"""
+    + fxsave64Template % {"mode": "sib"}
+    + """
 };
 
 def macroop FXSAVE64_P {
     rdip t7
-''' + fxsave64Template % { "mode" : "riprel" } + '''
+"""
+    + fxsave64Template % {"mode": "riprel"}
+    + """
 };
 
 def macroop FXRSTOR_M {
-''' + fxrstor32Template % { "mode" : "sib" } + '''
+"""
+    + fxrstor32Template % {"mode": "sib"}
+    + """
 };
 
 def macroop FXRSTOR_P {
     rdip t7
-''' + fxrstor32Template % { "mode" : "riprel" } + '''
+"""
+    + fxrstor32Template % {"mode": "riprel"}
+    + """
 };
 
 def macroop FXRSTOR64_M {
-''' + fxrstor64Template % { "mode" : "sib" } + '''
+"""
+    + fxrstor64Template % {"mode": "sib"}
+    + """
 };
 
 def macroop FXRSTOR64_P {
     rdip t7
-''' + fxrstor64Template % { "mode" : "riprel" } + '''
+"""
+    + fxrstor64Template % {"mode": "riprel"}
+    + """
 };
-'''
+"""
+)

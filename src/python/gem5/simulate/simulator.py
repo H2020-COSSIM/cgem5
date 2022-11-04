@@ -32,16 +32,21 @@ from m5.objects import Root
 from m5.util import warn
 
 import os
+import sys
+from pathlib import Path
 from typing import Optional, List, Tuple, Dict, Generator, Union
 
 from .exit_event_generators import (
-    default_exit_generator,
-    default_switch_generator,
-    default_workbegin_generator,
-    default_workend_generator,
+    warn_default_decorator,
+    exit_generator,
+    switch_generator,
+    save_checkpoint_generator,
+    reset_stats_generator,
+    dump_stats_generator,
 )
 from .exit_event import ExitEvent
 from ..components.boards.abstract_board import AbstractBoard
+from ..components.processors.switchable_processor import SwitchableProcessor
 from ..components.processors.cpu_types import CPUTypes
 
 
@@ -68,20 +73,32 @@ class Simulator:
     This will run a simulation and execute default behavior for exit events.
     """
 
+    # Here we declare the modules which should not be imported into any gem5
+    # standard library run. The key is the module (e.g,
+    # "import common.Options") and the value is the reason, which will be
+    # output in the case this module is imported.
+    # This is checked with the `run` function is executed.
+    _banned_modules = {
+        "common.Options": "The options provided by 'Options' are not "
+        "compatible with the gem5 standard library.",
+    }
+
     def __init__(
         self,
         board: AbstractBoard,
-        full_system: bool = True,
+        full_system: Optional[bool] = None,
         on_exit_event: Optional[
             Dict[Union[str, ExitEvent], Generator[Optional[bool], None, None]]
         ] = None,
         expected_execution_order: Optional[List[ExitEvent]] = None,
+        checkpoint_path: Optional[Path] = None,
     ) -> None:
         """
         :param board: The board to be simulated.
-        :param full_system: Whether to run in full-system simulation or not. If
-        False, the simulation will run in Syscall-Execution mode. True by
-        default.
+        :param full_system: Whether to run as a full-system simulation or not.
+        This is optional and used to override default behavior. If not set,
+        whether or not to run in FS mode will be determined via the board's
+        `is_fullsystem()` function.
         :param on_exit_event: An optional map to specify the generator to
         execute on each exit event. The generator may yield a boolean which,
         if True, will have the Simulator exit the run loop.
@@ -90,6 +107,11 @@ class Simulator:
         encountered (e.g., 'Workbegin', 'Workend', then 'Exit'), an Exception
         is thrown. If this parameter is not specified, any ordering of exit
         events is valid.
+        :param checkpoint_path: An optional parameter specifying the directory
+        of the checkpoint to instantiate from. When the path is None, no
+        checkpoint will be loaded. By default, the path is None. **This
+        parameter is deprecated. Please set the checkpoint when setting the
+        board's workload**.
 
         `on_exit_event` usage notes
         ---------------------------
@@ -128,14 +150,16 @@ class Simulator:
         Each exit event has a default behavior if none is specified by the
         user. These are as follows:
 
-            * ExitEvent.EXIT:  default_exit_list
-            * ExitEvent.CHECKPOINT: default_exit_list
-            * ExitEvent.FAIL : default_exit_list
-            * ExitEvent.SWITCHCPU: default_switch_list
-            * ExitEvent.WORKBEGIN: default_workbegin_list
-            * ExitEvent.WORKEND: default_workend_list
-            * ExitEvent.USER_INTERRUPT: default_exit_generator
-            * ExitEvent.MAX_TICK: default_exit_generator()
+            * ExitEvent.EXIT:  exit simulation
+            * ExitEvent.CHECKPOINT: take a checkpoint
+            * ExitEvent.FAIL : exit simulation
+            * ExitEvent.SWITCHCPU: call `switch` on the processor
+            * ExitEvent.WORKBEGIN: reset stats
+            * ExitEvent.WORKEND: exit simulation
+            * ExitEvent.USER_INTERRUPT: exit simulation
+            * ExitEvent.MAX_TICK: exit simulation
+            * ExitEvent.SIMPOINT_BEGIN: reset stats
+            * ExitEvent.MAX_INSTS: exit simulation
 
         These generators can be found in the `exit_event_generator.py` module.
 
@@ -150,17 +174,40 @@ class Simulator:
         # We specify a dictionary here outlining the default behavior for each
         # exit event. Each exit event is mapped to a generator.
         self._default_on_exit_dict = {
-            ExitEvent.EXIT: default_exit_generator(),
-            # TODO: Something else should be done here for CHECKPOINT
-            ExitEvent.CHECKPOINT: default_exit_generator(),
-            ExitEvent.FAIL: default_exit_generator(),
-            ExitEvent.SWITCHCPU: default_switch_generator(
-                processor=board.get_processor()
-            ),
-            ExitEvent.WORKBEGIN: default_workbegin_generator(),
-            ExitEvent.WORKEND: default_workend_generator(),
-            ExitEvent.USER_INTERRUPT: default_exit_generator(),
-            ExitEvent.MAX_TICK: default_exit_generator(),
+            ExitEvent.EXIT: exit_generator(),
+            ExitEvent.CHECKPOINT: warn_default_decorator(
+                save_checkpoint_generator,
+                "checkpoint",
+                "creating a checkpoint and continuing",
+            )(),
+            ExitEvent.FAIL: exit_generator(),
+            ExitEvent.SWITCHCPU: warn_default_decorator(
+                switch_generator,
+                "switch CPU",
+                "switching the CPU type of the processor and continuing",
+            )(processor=board.get_processor()),
+            ExitEvent.WORKBEGIN: warn_default_decorator(
+                reset_stats_generator,
+                "work begin",
+                "resetting the stats and continuing",
+            )(),
+            ExitEvent.WORKEND: warn_default_decorator(
+                dump_stats_generator,
+                "work end",
+                "dumping the stats and continuing",
+            )(),
+            ExitEvent.USER_INTERRUPT: exit_generator(),
+            ExitEvent.MAX_TICK: exit_generator(),
+            ExitEvent.SIMPOINT_BEGIN: warn_default_decorator(
+                reset_stats_generator,
+                "simpoint begin",
+                "resetting the stats and continuing",
+            )(),
+            ExitEvent.MAX_INSTS: warn_default_decorator(
+                exit_generator,
+                "max instructions",
+                "exiting the simulation",
+            )(),
         }
 
         if on_exit_event:
@@ -176,6 +223,52 @@ class Simulator:
 
         self._last_exit_event = None
         self._exit_event_count = 0
+
+        if checkpoint_path:
+            warn(
+                "Setting the checkpoint path via the Simulator constructor is "
+                "deprecated and will be removed in future releases of gem5. "
+                "Please set this through via the appropriate workload "
+                "function (i.e., `set_se_binary_workload` or "
+                "`set_kernel_disk_workload`). If both are set the workload "
+                "function set takes precedence."
+            )
+
+        self._checkpoint_path = checkpoint_path
+
+    def schedule_simpoint(
+        self, simpoint_start_insts: List[int], schedule_at_init: bool = False
+    ) -> None:
+        """
+        Schedule SIMPOINT_BEGIN exit events
+
+        **Warning:** SimPoints only work with one core
+
+        :param simpoint_start_insts: a list of number of instructions
+        indicating the starting point of the simpoints
+        :param schedule_at_init: if it is True, schedule the events in the init
+        stage of the core, else, schedule the events during the simulation
+        """
+        if self._board.get_processor().get_num_cores() > 1:
+            warn("SimPoints only work with one core")
+        self._board.get_processor().get_cores()[0].set_simpoint(
+            simpoint_start_insts, schedule_at_init
+        )
+
+    def schedule_max_insts(
+        self, inst: int, schedule_at_init: bool = False
+    ) -> None:
+        """
+        Schedule a MAX_INSTS exit event when any thread in the current core
+        reaches the given number of instructions
+
+        :param insts: a number of instructions
+        :param schedule_at_init: if it is True, schedule the event in the init
+        stage of the core, else, schedule the event during the simulation
+        """
+        self._board.get_processor().get_cores()[0].set_inst_stop_any_thread(
+            inst, schedule_at_init
+        )
 
     def get_stats(self) -> Dict:
         """
@@ -202,9 +295,19 @@ class Simulator:
 
         :param path: That path in which the file should be output to.
         """
-        if not os.is_path_exists_or_creatable(path):
+        path_path = Path(path)
+        parent = path_path.parent
+
+        if (
+            not parent.is_dir()
+            or not os.access(parent, os.W_OK)
+            or (
+                path_path.exists()
+                and (path_path.is_dir() or not os.access(path_path, os.W_OK))
+            )
+        ):
             raise Exception(
-                f"Path '{path}' is is not a valid text stats output location."
+                f"Specified text stats output path '{path}' is invalid."
             )
         addStatVisitor(path)
 
@@ -216,9 +319,19 @@ class Simulator:
 
         :param path: That path in which the JSON should be output to.
         """
-        if not os.is_path_exists_or_creatable(path):
+        path_path = Path(path)
+        parent = path_path.parent
+
+        if (
+            not parent.is_dir()
+            or not os.access(parent, os.W_OK)
+            or (
+                path_path.exists()
+                and (path_path.is_dir() or not os.access(path_path, os.W_OK))
+            )
+        ):
             raise Exception(
-                f"Path '{path}' is is not a valid JSON output location."
+                f"Specified json stats output path '{path}' is invalid."
             )
         addStatVisitor(f"json://{path}")
 
@@ -264,21 +377,57 @@ class Simulator:
         """
 
         if not self._instantiated:
-            root = Root(full_system=self._full_system, board=self._board)
+
+            # Before anything else we run the AbstractBoard's
+            # `_pre_instantiate` function.
+            self._board._pre_instantiate()
+
+            root = Root(
+                full_system=self._full_system
+                if self._full_system is not None
+                else self._board.is_fullsystem(),
+                board=self._board,
+            )
 
             # We take a copy of the Root in case it's required elsewhere
             # (for example, in `get_stats()`).
             self._root = root
 
-            if CPUTypes.KVM in [
-                core.get_type()
-                for core in self._board.get_processor().get_cores()
-            ]:
+            # The following is a bit of a hack. If a simulation is to use a KVM
+            # core then the `sim_quantum` value must be set. However, in the
+            # case of using a SwitchableProcessor the KVM cores may be
+            # switched out and therefore not accessible via `get_cores()`.
+            # This is the reason for the `isinstance` check.
+            #
+            # We cannot set the `sim_quantum` value in every simulation as
+            # setting it causes the scheduling of exits to be off by the
+            # `sim_quantum` value (something necessary if we are using KVM
+            # cores). Ergo we only set the value of KVM cores are present.
+            #
+            # There is still a bug here in that if the user is switching to and
+            # from KVM and non-KVM cores via the SwitchableProcessor then the
+            # scheduling of exits for the non-KVM cores will be incorrect. This
+            # will be fixed at a later date.
+            processor = self._board.processor
+            if any(core.is_kvm_core() for core in processor.get_cores()) or (
+                isinstance(processor, SwitchableProcessor)
+                and any(core.is_kvm_core() for core in processor._all_cores())
+            ):
                 m5.ticks.fixGlobalFrequency()
                 root.sim_quantum = m5.ticks.fromSeconds(0.001)
 
-            m5.instantiate()
+            # m5.instantiate() takes a parameter specifying the path to the
+            # checkpoint directory. If the parameter is None, no checkpoint
+            # will be restored.
+            if self._board._checkpoint:
+                m5.instantiate(self._board._checkpoint.as_posix())
+            else:
+                m5.instantiate(self._checkpoint_path)
             self._instantiated = True
+
+            # Let the board know that instantiate has been called so it can do
+            # any final things.
+            self._board._post_instantiate()
 
     def run(self, max_ticks: int = m5.MaxTick) -> None:
         """
@@ -290,6 +439,15 @@ class Simulator:
         received, if another simulation exit event is met the tick count is
         reset. This is the **maximum number of ticks per simululation run**.
         """
+
+        # Check to ensure no banned module has been imported.
+        for banned_module in self._banned_modules.keys():
+            if banned_module in sys.modules:
+                raise Exception(
+                    f"The banned module '{banned_module}' has been included. "
+                    "Please do not use this in your simulations. "
+                    f"Reason: {self._banned_modules[banned_module]}"
+                )
 
         # We instantiate the board if it has not already been instantiated.
         self._instantiate()
@@ -347,3 +505,12 @@ class Simulator:
             # run loop.
             if exit_on_completion:
                 return
+
+    def save_checkpoint(self, checkpoint_dir: Path) -> None:
+        """
+        This function will save the checkpoint to the specified directory.
+
+        :param checkpoint_dir: The path to the directory where the checkpoint
+        will be saved.
+        """
+        m5.checkpoint(str(checkpoint_dir))

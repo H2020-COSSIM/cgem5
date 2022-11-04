@@ -24,37 +24,42 @@
 # (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-from micro_asm import MicroAssembler, Combinational_Macroop, Rom_Macroop, Rom
+from micro_asm import MicroAssembler, CombinationalMacroop, RomMacroop, Rom
+
 
 class Bah(object):
     def __init__(self):
         self.mnemonic = "bah"
 
+
 class Bah_Tweaked(object):
     def __init__(self):
         self.mnemonic = "bah_tweaked"
 
+
 class Hoop(object):
     def __init__(self, first_param, second_param):
         self.mnemonic = "hoop_%s_%s" % (first_param, second_param)
+
     def __str__(self):
         return "%s" % self.mnemonic
+
 
 class Dah(object):
     def __init__(self):
         self.mnemonic = "dah"
 
-microops = {
-    "bah": Bah,
-    "hoop": Hoop,
-    "dah": Dah
-}
 
-class TestMacroop(Combinational_Macroop):
+microops = {"bah": Bah, "hoop": Hoop, "dah": Dah}
+
+
+class TestMacroop(CombinationalMacroop):
     def tweak(self):
         microops["bah"] = Bah_Tweaked
+
     def untweak(self):
         microops["bah"] = Bah
+
     def print_debug(self, message):
         print(message)
 
@@ -63,12 +68,13 @@ class TestMacroop(Combinational_Macroop):
         self.directives = {
             "tweak": self.tweak,
             "untweak": self.untweak,
-            "print": self.print_debug
+            "print": self.print_debug,
         }
 
-assembler = MicroAssembler(TestMacroop, microops, Rom('main ROM'), Rom_Macroop)
 
-testAssembly = '''
+assembler = MicroAssembler(TestMacroop, microops, Rom("main ROM"), RomMacroop)
+
+testAssembly = """
 # Single line comment
 
 def rom {
@@ -101,5 +107,5 @@ def macroop squashy {
 };
 
 def macroop jumper (bar);
-'''
+"""
 assembler.assemble(testAssembly)

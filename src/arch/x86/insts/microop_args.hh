@@ -36,7 +36,10 @@
 #include <utility>
 
 #include "arch/x86/insts/static_inst.hh"
+#include "arch/x86/regs/float.hh"
 #include "arch/x86/regs/int.hh"
+#include "arch/x86/regs/misc.hh"
+#include "arch/x86/regs/segment.hh"
 #include "arch/x86/types.hh"
 #include "base/compiler.hh"
 #include "base/cprintf.hh"
@@ -143,8 +146,7 @@ struct IntOp : public Base
     void
     print(std::ostream &os) const
     {
-        X86StaticInst::printReg(os, RegId(IntRegClass, this->opIndex()),
-                this->size);
+        X86StaticInst::printReg(os, intRegClass[this->opIndex()], this->size);
     }
 };
 
@@ -155,14 +157,13 @@ struct FoldedOp : public Base
 
     template <class InstType>
     FoldedOp(InstType *inst, ArgType idx) :
-        Base(INTREG_FOLDED(idx.index, inst->foldOBit), inst->dataSize)
+        Base(intRegFolded(idx.index, inst->foldOBit), inst->dataSize)
     {}
 
     void
     print(std::ostream &os) const
     {
-        X86StaticInst::printReg(os, RegId(IntRegClass, this->opIndex()),
-                this->size);
+        X86StaticInst::printReg(os, intRegClass[this->opIndex()], this->size);
     }
 };
 
@@ -223,8 +224,7 @@ struct MiscOp : public Base
     void
     print(std::ostream &os) const
     {
-        X86StaticInst::printReg(os, RegId(MiscRegClass, this->opIndex()),
-                this->size);
+        X86StaticInst::printReg(os, miscRegClass[this->opIndex()], this->size);
     }
 };
 
@@ -246,7 +246,7 @@ struct FloatOp : public Base
     void
     print(std::ostream &os) const
     {
-        X86StaticInst::printReg(os, RegId(FloatRegClass, this->opIndex()),
+        X86StaticInst::printReg(os, floatRegClass[this->opIndex()],
                 this->size);
     }
 };
@@ -360,12 +360,12 @@ struct AddrOp
 
     template <class InstType>
     AddrOp(InstType *inst, const ArgType &args) : scale(args.scale),
-        index(INTREG_FOLDED(args.index.index, inst->foldABit)),
-        base(INTREG_FOLDED(args.base.index, inst->foldABit)),
+        index(intRegFolded(args.index.index, inst->foldABit)),
+        base(intRegFolded(args.base.index, inst->foldABit)),
         disp(args.disp), segment(args.segment.index),
         size(inst->addressSize)
     {
-        assert(segment < NUM_SEGMENTREGS);
+        assert(segment < segment_idx::NumIdxs);
     }
 
     void

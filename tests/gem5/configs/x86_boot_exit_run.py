@@ -30,21 +30,25 @@ This script will run a simple boot exit test.
 
 import m5
 
-from gem5.runtime import (
-    get_runtime_coherence_protocol,
-    get_runtime_isa,
-)
+from gem5.runtime import get_runtime_coherence_protocol
 from gem5.isas import ISA
 from gem5.utils.requires import requires
-from gem5.resources.resource import Resource
 from gem5.coherence_protocol import CoherenceProtocol
 from gem5.components.boards.x86_board import X86Board
-from gem5.components.processors.cpu_types import CPUTypes
+from gem5.components.processors.cpu_types import (
+    get_cpu_types_str_set,
+    get_cpu_type_from_str,
+)
 from gem5.components.processors.simple_processor import SimpleProcessor
 from gem5.simulate.simulator import Simulator
+from gem5.resources.workload import Workload
 
 import argparse
 import importlib
+
+from python.gem5.components.boards.kernel_disk_workload import (
+    KernelDiskWorkload,
+)
 
 parser = argparse.ArgumentParser(
     description="A script to run the gem5 boot test. This test boots the "
@@ -70,7 +74,7 @@ parser.add_argument(
     "-c",
     "--cpu",
     type=str,
-    choices=("kvm", "atomic", "timing", "o3"),
+    choices=get_cpu_types_str_set(),
     required=True,
     help="The CPU type.",
 )
@@ -80,7 +84,7 @@ parser.add_argument(
     type=str,
     required=False,
     default="DualChannelDDR3_1600",
-    help="The python class for the memory interface to use"
+    help="The python class for the memory interface to use",
 )
 parser.add_argument(
     "-b",
@@ -116,21 +120,21 @@ if args.mem_system == "mi_example":
 elif args.mem_system == "mesi_two_level":
     coherence_protocol_required = CoherenceProtocol.MESI_TWO_LEVEL
 
-requires(isa_required=ISA.X86,
-         coherence_protocol_required=coherence_protocol_required,
-         kvm_required=(args.cpu == "kvm"))
+requires(
+    isa_required=ISA.X86,
+    coherence_protocol_required=coherence_protocol_required,
+    kvm_required=(args.cpu == "kvm"),
+)
 
 cache_hierarchy = None
 if args.mem_system == "mi_example":
-    from gem5.components.cachehierarchies.ruby.\
-        mi_example_cache_hierarchy import (
+    from gem5.components.cachehierarchies.ruby.mi_example_cache_hierarchy import (
         MIExampleCacheHierarchy,
     )
 
     cache_hierarchy = MIExampleCacheHierarchy(size="32kB", assoc=8)
 elif args.mem_system == "mesi_two_level":
-    from gem5.components.cachehierarchies.ruby.\
-        mesi_two_level_cache_hierarchy import (
+    from gem5.components.cachehierarchies.ruby.mesi_two_level_cache_hierarchy import (
         MESITwoLevelCacheHierarchy,
     )
 
@@ -144,8 +148,7 @@ elif args.mem_system == "mesi_two_level":
         num_l2_banks=1,
     )
 elif args.mem_system == "classic":
-    from gem5.components.cachehierarchies.classic.\
-        private_l1_cache_hierarchy import (
+    from gem5.components.cachehierarchies.classic.private_l1_cache_hierarchy import (
         PrivateL1CacheHierarchy,
     )
 
@@ -163,30 +166,15 @@ assert cache_hierarchy != None
 # Warning: This must be kept at 3GB for now. X86Motherboard does not support
 # anything else right now!
 python_module = "gem5.components.memory"
-memory_class = getattr(
-    importlib.import_module(python_module), args.dram_class
-)
+memory_class = getattr(importlib.import_module(python_module), args.dram_class)
 memory = memory_class(size="3GiB")
 
 # Setup a Processor.
-
-cpu_type = None
-if args.cpu == "kvm":
-    cpu_type = CPUTypes.KVM
-elif args.cpu == "atomic":
-    cpu_type = CPUTypes.ATOMIC
-elif args.cpu == "timing":
-    cpu_type = CPUTypes.TIMING
-elif args.cpu == "o3":
-    cpu_type = CPUTypes.O3
-else:
-    raise NotImplementedError(
-        "CPU type '{}' is not supported in the boot tests.".format(args.cpu)
-    )
-
-assert cpu_type != None
-
-processor = SimpleProcessor(cpu_type=cpu_type, num_cores=args.num_cpus)
+processor = SimpleProcessor(
+    cpu_type=get_cpu_type_from_str(args.cpu),
+    isa=ISA.X86,
+    num_cores=args.num_cpus,
+)
 
 # Setup the motherboard.
 motherboard = X86Board(
@@ -200,23 +188,16 @@ kernal_args = motherboard.get_default_kernel_args()
 if args.boot_type == "init":
     kernal_args.append("init=/root/exit.sh")
 
-# Set the Full System workload.
-motherboard.set_kernel_disk_workload(
-    kernel=Resource(
-        "x86-linux-kernel-5.4.49",
-        resource_directory=args.resource_directory,
-    ),
-    disk_image=Resource(
-        "x86-ubuntu-18.04-img",
-        resource_directory=args.resource_directory,
-    ),
-    kernel_args=kernal_args,
+# Set the workload.
+workload = Workload(
+    "x86-ubuntu-18.04-boot", resource_directory=args.resource_directory
 )
-
+workload.set_parameter("kernel_args", kernal_args)
+motherboard.set_workload(workload)
 
 # Begin running of the simulation. This will exit once the Linux system boot
 # is complete.
-print("Running with ISA: " + get_runtime_isa().name)
+print("Running with ISA: " + processor.get_isa().name)
 print("Running with protocol: " + get_runtime_coherence_protocol().name)
 print()
 
@@ -224,13 +205,12 @@ print("Beginning simulation!")
 simulator = Simulator(board=motherboard)
 
 if args.tick_exit:
-    simulator.run(max_ticks = args.tick_exit)
+    simulator.run(max_ticks=args.tick_exit)
 else:
     simulator.run()
 
 print(
     "Exiting @ tick {} because {}.".format(
-        simulator.get_current_tick(),
-        simulator.get_last_exit_event_cause(),
+        simulator.get_current_tick(), simulator.get_last_exit_event_cause()
     )
 )

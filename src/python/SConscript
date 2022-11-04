@@ -39,6 +39,8 @@ PySource('gem5.simulate', 'gem5/simulate/exit_event_generators.py')
 PySource('gem5.components', 'gem5/components/__init__.py')
 PySource('gem5.components.boards', 'gem5/components/boards/__init__.py')
 PySource('gem5.components.boards', 'gem5/components/boards/abstract_board.py')
+PySource('gem5.components.boards',
+    'gem5/components/boards/abstract_system_board.py')
 PySource('gem5.components.boards', 'gem5/components/boards/mem_mode.py')
 PySource('gem5.components.boards', 'gem5/components/boards/riscv_board.py')
 PySource('gem5.components.boards.experimental',
@@ -48,6 +50,7 @@ PySource('gem5.components.boards.experimental',
 PySource('gem5.components.boards', 'gem5/components/boards/simple_board.py')
 PySource('gem5.components.boards', 'gem5/components/boards/test_board.py')
 PySource('gem5.components.boards', 'gem5/components/boards/x86_board.py')
+PySource('gem5.components.boards', 'gem5/components/boards/arm_board.py')
 PySource('gem5.components.boards',
     "gem5/components/boards/kernel_disk_workload.py")
 PySource('gem5.components.boards',
@@ -86,6 +89,9 @@ PySource('gem5.components.cachehierarchies.classic',
 PySource('gem5.components.cachehierarchies.classic',
     'gem5/components/cachehierarchies/classic/'
     'private_l1_private_l2_cache_hierarchy.py')
+PySource('gem5.components.cachehierarchies.classic',
+    'gem5/components/cachehierarchies/classic/'
+    'private_l1_shared_l2_cache_hierarchy.py')
 PySource('gem5.components.cachehierarchies.classic.caches',
     'gem5/components/cachehierarchies/classic/caches/__init__.py')
 PySource('gem5.components.cachehierarchies.classic.caches',
@@ -145,6 +151,7 @@ PySource('gem5.components.memory', 'gem5/components/memory/simple.py')
 PySource('gem5.components.memory', 'gem5/components/memory/memory.py')
 PySource('gem5.components.memory', 'gem5/components/memory/single_channel.py')
 PySource('gem5.components.memory', 'gem5/components/memory/multi_channel.py')
+PySource('gem5.components.memory', 'gem5/components/memory/hbm.py')
 PySource('gem5.components.memory.dram_interfaces',
     'gem5/components/memory/dram_interfaces/__init__.py')
 PySource('gem5.components.memory.dram_interfaces',
@@ -172,6 +179,8 @@ PySource('gem5.components.processors',
 PySource('gem5.components.processors',
     'gem5/components/processors/abstract_generator_core.py')
 PySource('gem5.components.processors',
+    'gem5/components/processors/abstract_generator.py')
+PySource('gem5.components.processors',
     'gem5/components/processors/abstract_processor.py')
 PySource('gem5.components.processors',
     'gem5/components/processors/complex_generator_core.py')
@@ -198,17 +207,36 @@ PySource('gem5.components.processors',
 PySource('gem5.components.processors',
     'gem5/components/processors/simple_core.py')
 PySource('gem5.components.processors',
+    'gem5/components/processors/base_cpu_core.py')
+PySource('gem5.components.processors',
     'gem5/components/processors/simple_processor.py')
+PySource('gem5.components.processors',
+    'gem5/components/processors/base_cpu_processor.py')
 PySource('gem5.components.processors',
     'gem5/components/processors/simple_switchable_processor.py')
 PySource('gem5.components.processors',
     'gem5/components/processors/switchable_processor.py')
+PySource('gem5.utils', 'gem5/utils/simpoint.py')
+PySource('gem5.components.processors',
+    'gem5/components/processors/traffic_generator_core.py')
+PySource('gem5.components.processors',
+    'gem5/components/processors/traffic_generator.py')
 PySource('gem5.prebuilt', 'gem5/prebuilt/__init__.py')
 PySource('gem5.prebuilt.demo', 'gem5/prebuilt/demo/__init__.py')
 PySource('gem5.prebuilt.demo', 'gem5/prebuilt/demo/x86_demo_board.py')
+PySource('gem5.prebuilt.riscvmatched',
+    'gem5/prebuilt/riscvmatched/riscvmatched_board.py')
+PySource('gem5.prebuilt.riscvmatched',
+    'gem5/prebuilt/riscvmatched/riscvmatched_cache.py')
+PySource('gem5.prebuilt.riscvmatched',
+    'gem5/prebuilt/riscvmatched/riscvmatched_processor.py')
+PySource('gem5.prebuilt.riscvmatched',
+    'gem5/prebuilt/riscvmatched/riscvmatched_core.py')
 PySource('gem5.resources', 'gem5/resources/__init__.py')
 PySource('gem5.resources', 'gem5/resources/downloader.py')
+PySource('gem5.resources', 'gem5/resources/md5_utils.py')
 PySource('gem5.resources', 'gem5/resources/resource.py')
+PySource('gem5.resources', 'gem5/resources/workload.py')
 PySource('gem5.utils', 'gem5/utils/__init__.py')
 PySource('gem5.utils', 'gem5/utils/filelock.py')
 PySource('gem5.utils', 'gem5/utils/override.py')
@@ -217,7 +245,6 @@ PySource('gem5.utils', 'gem5/utils/requires.py')
 PySource('', 'importer.py')
 PySource('m5', 'm5/__init__.py')
 PySource('m5', 'm5/SimObject.py')
-PySource('m5', 'm5/config.py')
 PySource('m5', 'm5/core.py')
 PySource('m5', 'm5/debug.py')
 PySource('m5', 'm5/event.py')

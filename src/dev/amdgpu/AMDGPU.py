@@ -28,8 +28,11 @@
 # POSSIBILITY OF SUCH DAMAGE.
 
 from m5.params import *
+from m5.proxy import *
 from m5.objects.PciDevice import PciDevice
 from m5.objects.PciDevice import PciMemBar, PciMemUpperBar, PciLegacyIoBar
+from m5.objects.Device import DmaDevice, DmaVirtDevice
+from m5.objects.ClockedObject import ClockedObject
 
 # PCI device model for an AMD Vega 10 based GPU. The PCI codes and BARs
 # correspond to a Vega Frontier Edition hardware device. None of the PCI
@@ -39,9 +42,9 @@ from m5.objects.PciDevice import PciMemBar, PciMemUpperBar, PciLegacyIoBar
 # device registers and memory. It is intended only to be used in full-system
 # simulation under Linux where the amdgpu driver is modprobed.
 class AMDGPUDevice(PciDevice):
-    type = 'AMDGPUDevice'
+    type = "AMDGPUDevice"
     cxx_header = "dev/amdgpu/amdgpu_device.hh"
-    cxx_class = 'gem5::AMDGPUDevice'
+    cxx_class = "gem5::AMDGPUDevice"
 
     # IDs for AMD Vega 10
     VendorID = 0x1002
@@ -56,12 +59,12 @@ class AMDGPUDevice(PciDevice):
     ProgIF = 0x00
 
     # Use max possible BAR size for Vega 10. We can override with driver param
-    BAR0 = PciMemBar(size='16GiB')
+    BAR0 = PciMemBar(size="16GiB")
     BAR1 = PciMemUpperBar()
-    BAR2 = PciMemBar(size='2MiB')
+    BAR2 = PciMemBar(size="2MiB")
     BAR3 = PciMemUpperBar()
-    BAR4 = PciLegacyIoBar(addr=0xf000, size='256B')
-    BAR5 = PciMemBar(size='512KiB')
+    BAR4 = PciLegacyIoBar(addr=0xF000, size="256B")
+    BAR5 = PciMemBar(size="512KiB")
 
     InterruptLine = 14
     InterruptPin = 2
@@ -69,5 +72,57 @@ class AMDGPUDevice(PciDevice):
 
     rom_binary = Param.String("ROM binary dumped from hardware")
     trace_file = Param.String("MMIO trace collected on hardware")
-    checkpoint_before_mmios = Param.Bool(False, "Take a checkpoint before the"
-                                                " device begins sending MMIOs")
+    checkpoint_before_mmios = Param.Bool(
+        False, "Take a checkpoint before the" " device begins sending MMIOs"
+    )
+
+    # Specific to Vega10: Vega10 has two SDMA engines these do not have any
+    # assigned function and are referenced by ID so they are given the generic
+    # names sdma0, sdma1, ... sdmaN.
+    sdma0 = Param.SDMAEngine("SDMA Engine 0")
+    sdma1 = Param.SDMAEngine("SDMA Engine 1")
+
+    # The cp is needed here to handle certain packets the device may receive.
+    # The config script should not create a new cp here but rather assign the
+    # same cp that is assigned to the Shader SimObject.
+    cp = Param.GPUCommandProcessor(NULL, "Command Processor")
+    pm4_pkt_proc = Param.PM4PacketProcessor("PM4 Packet Processor")
+    memory_manager = Param.AMDGPUMemoryManager("GPU Memory Manager")
+    memories = VectorParam.AbstractMemory([], "All memories in the device")
+    device_ih = Param.AMDGPUInterruptHandler("GPU Interrupt handler")
+
+
+class SDMAEngine(DmaVirtDevice):
+    type = "SDMAEngine"
+    cxx_header = "dev/amdgpu/sdma_engine.hh"
+    cxx_class = "gem5::SDMAEngine"
+
+    gpu_device = Param.AMDGPUDevice(NULL, "GPU Controller")
+    walker = Param.VegaPagetableWalker("Page table walker")
+
+
+class PM4PacketProcessor(DmaVirtDevice):
+    type = "PM4PacketProcessor"
+    cxx_header = "dev/amdgpu/pm4_packet_processor.hh"
+    cxx_class = "gem5::PM4PacketProcessor"
+
+
+class AMDGPUMemoryManager(ClockedObject):
+    type = "AMDGPUMemoryManager"
+    cxx_header = "dev/amdgpu/memory_manager.hh"
+    cxx_class = "gem5::AMDGPUMemoryManager"
+
+    port = RequestPort("Memory Port to access VRAM (device memory)")
+    system = Param.System(Parent.any, "System the dGPU belongs to")
+
+
+class AMDGPUInterruptHandler(DmaDevice):
+    type = "AMDGPUInterruptHandler"
+    cxx_header = "dev/amdgpu/interrupt_handler.hh"
+    cxx_class = "gem5::AMDGPUInterruptHandler"
+
+
+class AMDGPUSystemHub(DmaDevice):
+    type = "AMDGPUSystemHub"
+    cxx_class = "gem5::AMDGPUSystemHub"
+    cxx_header = "dev/amdgpu/system_hub.hh"

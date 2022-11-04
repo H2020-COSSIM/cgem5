@@ -35,159 +35,163 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef __ARCH_X86_INTREGS_HH__
-#define __ARCH_X86_INTREGS_HH__
+#ifndef __ARCH_X86_REGS_INT_HH__
+#define __ARCH_X86_REGS_INT_HH__
 
 #include "arch/x86/x86_traits.hh"
 #include "base/bitunion.hh"
 #include "base/logging.hh"
+#include "cpu/reg_class.hh"
+#include "debug/IntRegs.hh"
 
 namespace gem5
 {
 
 namespace X86ISA
 {
-    BitUnion64(X86IntReg)
-        Bitfield<63,0> R;
-        SignedBitfield<63,0> SR;
-        Bitfield<31,0> E;
-        SignedBitfield<31,0> SE;
-        Bitfield<15,0> X;
-        SignedBitfield<15,0> SX;
-        Bitfield<15,8> H;
-        SignedBitfield<15,8> SH;
-        Bitfield<7, 0> L;
-        SignedBitfield<7, 0> SL;
-    EndBitUnion(X86IntReg)
 
-    enum IntRegIndex
-    {
-        INTREG_RAX,
-        INTREG_EAX = INTREG_RAX,
-        INTREG_AX = INTREG_RAX,
-        INTREG_AL = INTREG_RAX,
+BitUnion64(X86IntReg)
+    Bitfield<63,0> R;
+    SignedBitfield<63,0> SR;
+    Bitfield<31,0> E;
+    SignedBitfield<31,0> SE;
+    Bitfield<15,0> X;
+    SignedBitfield<15,0> SX;
+    Bitfield<15,8> H;
+    SignedBitfield<15,8> SH;
+    Bitfield<7, 0> L;
+    SignedBitfield<7, 0> SL;
+EndBitUnion(X86IntReg)
 
-        INTREG_RCX,
-        INTREG_ECX = INTREG_RCX,
-        INTREG_CX = INTREG_RCX,
-        INTREG_CL = INTREG_RCX,
+namespace int_reg
+{
 
-        INTREG_RDX,
-        INTREG_EDX = INTREG_RDX,
-        INTREG_DX = INTREG_RDX,
-        INTREG_DL = INTREG_RDX,
+enum : RegIndex
+{
+    _RaxIdx,
+    _RcxIdx,
+    _RdxIdx,
+    _RbxIdx,
+    _RspIdx,
+    _RbpIdx,
+    _RsiIdx,
+    _RdiIdx,
+    _R8Idx,
+    _R9Idx,
+    _R10Idx,
+    _R11Idx,
+    _R12Idx,
+    _R13Idx,
+    _R14Idx,
+    _R15Idx,
 
-        INTREG_RBX,
-        INTREG_EBX = INTREG_RBX,
-        INTREG_BX = INTREG_RBX,
-        INTREG_BL = INTREG_RBX,
+    NumArchRegs,
+    MicroBegin = NumArchRegs,
+    _T0Idx = MicroBegin,
+    MicroEnd = MicroBegin + NumMicroIntRegs,
 
-        INTREG_RSP,
-        INTREG_ESP = INTREG_RSP,
-        INTREG_SP = INTREG_RSP,
-        INTREG_SPL = INTREG_RSP,
-        INTREG_AH = INTREG_RSP,
+    _ProdlowIdx,
+    _ProdhiIdx,
+    _QuotientIdx,
+    _RemainderIdx,
+    _DivisorIdx,
+    _DoublebitsIdx,
 
-        INTREG_RBP,
-        INTREG_EBP = INTREG_RBP,
-        INTREG_BP = INTREG_RBP,
-        INTREG_BPL = INTREG_RBP,
-        INTREG_CH = INTREG_RBP,
+    NumRegs
+};
 
-        INTREG_RSI,
-        INTREG_ESI = INTREG_RSI,
-        INTREG_SI = INTREG_RSI,
-        INTREG_SIL = INTREG_RSI,
-        INTREG_DH = INTREG_RSI,
+} // namespace int_reg
 
-        INTREG_RDI,
-        INTREG_EDI = INTREG_RDI,
-        INTREG_DI = INTREG_RDI,
-        INTREG_DIL = INTREG_RDI,
-        INTREG_BH = INTREG_RDI,
+class FlatIntRegClassOps : public RegClassOps
+{
+    std::string regName(const RegId &id) const override;
+};
 
-        INTREG_R8,
-        INTREG_R8D = INTREG_R8,
-        INTREG_R8W = INTREG_R8,
-        INTREG_R8B = INTREG_R8,
+inline constexpr FlatIntRegClassOps flatIntRegClassOps;
 
-        INTREG_R9,
-        INTREG_R9D = INTREG_R9,
-        INTREG_R9W = INTREG_R9,
-        INTREG_R9B = INTREG_R9,
+inline constexpr RegClass flatIntRegClass =
+    RegClass(IntRegClass, IntRegClassName, int_reg::NumRegs, debug::IntRegs).
+    ops(flatIntRegClassOps);
 
-        INTREG_R10,
-        INTREG_R10D = INTREG_R10,
-        INTREG_R10W = INTREG_R10,
-        INTREG_R10B = INTREG_R10,
+class IntRegClassOps : public FlatIntRegClassOps
+{
+    RegId flatten(const BaseISA &isa, const RegId &id) const override;
+};
 
-        INTREG_R11,
-        INTREG_R11D = INTREG_R11,
-        INTREG_R11W = INTREG_R11,
-        INTREG_R11B = INTREG_R11,
+inline constexpr IntRegClassOps intRegClassOps;
 
-        INTREG_R12,
-        INTREG_R12D = INTREG_R12,
-        INTREG_R12W = INTREG_R12,
-        INTREG_R12B = INTREG_R12,
+inline constexpr RegClass intRegClass =
+    RegClass(IntRegClass, IntRegClassName, int_reg::NumRegs, debug::IntRegs).
+    ops(intRegClassOps).
+    needsFlattening();
 
-        INTREG_R13,
-        INTREG_R13D = INTREG_R13,
-        INTREG_R13W = INTREG_R13,
-        INTREG_R13B = INTREG_R13,
+namespace int_reg
+{
 
-        INTREG_R14,
-        INTREG_R14D = INTREG_R14,
-        INTREG_R14W = INTREG_R14,
-        INTREG_R14B = INTREG_R14,
+inline constexpr RegId
+    Rax = intRegClass[_RaxIdx],
+    Rcx = intRegClass[_RcxIdx],
+    Rdx = intRegClass[_RdxIdx],
+    Rbx = intRegClass[_RbxIdx],
+    Rsp = intRegClass[_RspIdx],
+    Rbp = intRegClass[_RbpIdx],
+    Rsi = intRegClass[_RsiIdx],
+    Rdi = intRegClass[_RdiIdx],
+    R8 = intRegClass[_R8Idx],
+    R9 = intRegClass[_R9Idx],
+    R10 = intRegClass[_R10Idx],
+    R11 = intRegClass[_R11Idx],
+    R12 = intRegClass[_R12Idx],
+    R13 = intRegClass[_R13Idx],
+    R14 = intRegClass[_R14Idx],
+    R15 = intRegClass[_R15Idx],
+    T0 = intRegClass[_T0Idx],
+    Prodlow = intRegClass[_ProdlowIdx],
+    Prodhi = intRegClass[_ProdhiIdx],
+    Quotient = intRegClass[_QuotientIdx],
+    Remainder = intRegClass[_RemainderIdx],
+    Divisor = intRegClass[_DivisorIdx],
+    Doublebits = intRegClass[_DoublebitsIdx];
 
-        INTREG_R15,
-        INTREG_R15D = INTREG_R15,
-        INTREG_R15W = INTREG_R15,
-        INTREG_R15B = INTREG_R15,
+// Aliases for other register sizes.
+inline constexpr auto
+    &Eax = Rax, &Ax = Rax, &Al = Rax,
+    &Ecx = Rcx, &Cx = Rcx, &Cl = Rcx,
+    &Edx = Rdx, &Dx = Rdx, &Dl = Rdx,
+    &Ebx = Rbx, &Bx = Rbx, &Bl = Rbx,
+    &Esp = Rsp, &Sp = Rsp, &Spl = Rsp, &Ah = Rsp,
+    &Ebp = Rbp, &Bp = Rbp, &Bpl = Rbp, &Ch = Rbp,
+    &Esi = Rsi, &Si = Rsi, &Sil = Rsi, &Dh = Rsi,
+    &Edi = Rdi, &Di = Rdi, &Dil = Rdi, &Bh = Rdi,
+    &R8d = R8, &R8w = R8, &R8b = R8,
+    &R9d = R9, &R9w = R9, &R9b = R9,
+    &R10d = R10, &R10w = R10, &R10b = R10,
+    &R11d = R11, &R11w = R11, &R11b = R11,
+    &R12d = R12, &R12w = R12, &R12b = R12,
+    &R13d = R13, &R13w = R13, &R13b = R13,
+    &R14d = R14, &R14w = R14, &R14b = R14,
+    &R15d = R15, &R15w = R15, &R15b = R15;
 
-        NUM_ARCH_INTREGS,
+} // namespace int_reg
 
-        INTREG_MICRO_BEGIN = NUM_ARCH_INTREGS,
-        INTREG_T0 = INTREG_MICRO_BEGIN,
-        INTREG_MICRO_END = INTREG_MICRO_BEGIN + NumMicroIntRegs,
+// This needs to be large enough to miss all the other bits of an index.
+inline constexpr RegIndex IntFoldBit = 1 << 6;
 
-        // The lower part of the result of multiplication.
-        INTREG_PRODLOW,
-        // The upper part of the result of multiplication.
-        INTREG_PRODHI,
-        // The quotient from division.
-        INTREG_QUOTIENT,
-        // The remainder from division.
-        INTREG_REMAINDER,
-        // The divisor for division.
-        INTREG_DIVISOR,
-        // The register to use for shift doubles.
-        INTREG_DOUBLEBITS,
+inline static constexpr RegId
+intRegMicro(int index)
+{
+    return intRegClass[int_reg::MicroBegin + index];
+}
 
-        NUM_INTREGS,
-    };
-
-    // This needs to be large enough to miss all the other bits of an index.
-    static const IntRegIndex IntFoldBit = (IntRegIndex)(1 << 6);
-
-    inline static IntRegIndex
-    INTREG_MICRO(int index)
-    {
-        return (IntRegIndex)(INTREG_MICRO_BEGIN + index);
-    }
-
-    inline static IntRegIndex
-    INTREG_FOLDED(int index, int foldBit)
-    {
-        if ((index & 0x1C) == 4 && foldBit)
-            index = (index - 4) | foldBit;
-        return (IntRegIndex)index;
-    }
-
-    const int NumIntRegs = NUM_INTREGS;
+inline static constexpr RegId
+intRegFolded(RegIndex index, RegIndex foldBit)
+{
+    if ((index & 0x1C) == 4 && foldBit)
+        index = (index - 4) | foldBit;
+    return intRegClass[index];
+}
 
 } // namespace X86ISA
 } // namespace gem5
 
-#endif // __ARCH_X86_INTREGS_HH__
+#endif // __ARCH_X86_REGS_INT_HH__

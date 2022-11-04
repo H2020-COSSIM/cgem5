@@ -34,16 +34,10 @@ from ...boards.abstract_board import AbstractBoard
 from ....coherence_protocol import CoherenceProtocol
 from ....isas import ISA
 from ....utils.override import overrides
-from ....runtime import get_runtime_isa
 from ....utils.requires import requires
 
 
-from m5.objects import (
-    RubySystem,
-    RubySequencer,
-    DMASequencer,
-    RubyPortProxy,
-)
+from m5.objects import RubySystem, RubySequencer, DMASequencer, RubyPortProxy
 
 
 class MIExampleCacheHierarchy(AbstractRubyCacheHierarchy):
@@ -52,11 +46,7 @@ class MIExampleCacheHierarchy(AbstractRubyCacheHierarchy):
     simple point-to-point topology.
     """
 
-    def __init__(
-        self,
-        size: str,
-        assoc: str,
-    ):
+    def __init__(self, size: str, assoc: str):
         """
         :param size: The size of each cache in the heirarchy.
         :param assoc: The associativity of each cache.
@@ -93,7 +83,7 @@ class MIExampleCacheHierarchy(AbstractRubyCacheHierarchy):
                 network=self.ruby_system.network,
                 core=core,
                 cache_line_size=board.get_cache_line_size(),
-                target_isa=get_runtime_isa(),
+                target_isa=board.get_processor().get_isa(),
                 clk_domain=board.get_clock_domain(),
             )
 
@@ -116,7 +106,7 @@ class MIExampleCacheHierarchy(AbstractRubyCacheHierarchy):
             )
 
             # Connect the interrupt ports
-            if get_runtime_isa() == ISA.X86:
+            if board.get_processor().get_isa() == ISA.X86:
                 int_req_port = cache.sequencer.interrupt_out_port
                 int_resp_port = cache.sequencer.in_ports
                 core.connect_interrupt(int_req_port, int_resp_port)
@@ -128,7 +118,7 @@ class MIExampleCacheHierarchy(AbstractRubyCacheHierarchy):
 
         # Create the directory controllers
         self._directory_controllers = []
-        for range, port in board.get_memory().get_mem_ports():
+        for range, port in board.get_mem_ports():
             dir = Directory(
                 self.ruby_system.network,
                 board.get_cache_line_size(),

@@ -24,7 +24,7 @@
 # (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-from ..runtime import get_runtime_coherence_protocol, get_runtime_isa
+from ..runtime import get_runtime_coherence_protocol, get_supported_isas
 from ..isas import ISA
 from ..coherence_protocol import CoherenceProtocol
 from typing import Optional
@@ -39,14 +39,14 @@ def _get_exception_str(msg: str):
     # stated. `inspect.stack()[1]` is the `requires` caller method. One above
     # this on the stack, `inspect.stack()[2]` should be where `requires` is
     # called.
-    if inspect.stack()[2].function  == '<module>':
+    if inspect.stack()[2].function == "<module>":
         # If the caller is a Python module, we use the filename. This is for
         # the case where the `requires` function is called outside of a class.
         name = inspect.stack()[2].filename
     else:
         # Otherwise we assume the `requires` is being called by a class, in
         # which case we label the exception message with the class name.
-        name = inspect.stack()[2].frame.f_locals['self'].__class__.__name__
+        name = inspect.stack()[2].frame.f_locals["self"].__class__.__name__
     return "[{}] {}".format(name, msg)
 
 
@@ -59,7 +59,7 @@ def requires(
     Ensures the ISA/Coherence protocol/KVM requirements are met. An exception
     will be raise if they are not.
 
-    :param isa_required: The ISA gem5 must be compiled to.
+    :param isa_required: The ISA(s) gem5 must be compiled to.
     :param coherence_protocol_required: The coherence protocol gem5 must be
         compiled to.
     :param kvm_required: The host system must have the Kernel-based Virtual
@@ -68,18 +68,38 @@ def requires(
         protocol do not match that of the current gem5 binary.
     """
 
-    runtime_isa = get_runtime_isa()
+    supported_isas = get_supported_isas()
     runtime_coherence_protocol = get_runtime_coherence_protocol()
     kvm_available = os.access("/dev/kvm", mode=os.R_OK | os.W_OK)
 
-    if isa_required != None and isa_required.value != runtime_isa.value:
-        raise Exception(
-            _get_exception_str(
-                msg="The current ISA is '{}'. Required: '{}'".format(
-                    runtime_isa.name, isa_required.name
-                )
-            )
-        )
+    # Note, previously I had the following code here:
+    #
+    # `if isa_required != None and isa_required not in supported_isas:`
+    #
+    # However, for reasons I do not currently understand, I frequently
+    # encountered errors such as the following:
+    #
+    # ```
+    # Exception: The required ISA is 'RISCV'. Supported ISAs:
+    # SPARC
+    # RISCV
+    # ARM
+    # X86
+    # POWER
+    # MIPS
+    # ```
+    #
+    # I do not know why this happens and my various attempts at tracking down
+    # why the enum did not compare correctly yielded no results. The following
+    # code works, even though it is verbose and appears functionally equivalent
+    # to the original code.
+    if isa_required != None and isa_required.value not in (
+        isa.value for isa in supported_isas
+    ):
+        msg = f"The required ISA is '{isa_required.name}'. Supported ISAs: "
+        for isa in supported_isas:
+            msg += f"{os.linesep}{isa.name}"
+        raise Exception(_get_exception_str(msg=msg))
 
     if (
         coherence_protocol_required != None
@@ -89,9 +109,9 @@ def requires(
         raise Exception(
             _get_exception_str(
                 msg="The current coherence protocol is "
-                    "'{}'. Required: '{}'".format(
-                        runtime_coherence_protocol.name,
-                        coherence_protocol_required.name,
+                "'{}'. Required: '{}'".format(
+                    runtime_coherence_protocol.name,
+                    coherence_protocol_required.name,
                 )
             )
         )
@@ -99,6 +119,6 @@ def requires(
     if kvm_required and not kvm_available:
         raise Exception(
             _get_exception_str(
-                msg="KVM is required but is unavaiable on this system"
+                msg="KVM is required but is unavailable on this system"
             )
         )

@@ -35,6 +35,7 @@
 
 from m5.params import *
 from m5.proxy import *
+from m5.objects.MemCtrl import MemCtrl
 from m5.objects.MemInterface import MemInterface
 from m5.objects.DRAMInterface import AddrMap
 
@@ -42,9 +43,9 @@ from m5.objects.DRAMInterface import AddrMap
 # The most important system-level performance effects of a NVM
 # are modeled without getting into too much detail of the media itself.
 class NVMInterface(MemInterface):
-    type = 'NVMInterface'
-    cxx_header = "mem/mem_interface.hh"
-    cxx_class = 'gem5::memory::NVMInterface'
+    type = "NVMInterface"
+    cxx_header = "mem/nvm_interface.hh"
+    cxx_class = "gem5::memory::NVMInterface"
 
     # NVM DIMM could have write buffer to offload writes
     # define buffer depth, which will limit the number of pending writes
@@ -62,8 +63,19 @@ class NVMInterface(MemInterface):
     tWRITE = Param.Latency("200ns", "Average NVM write latency")
     tSEND = Param.Latency("15ns", "Access latency")
 
-    two_cycle_rdwr = Param.Bool(False,
-                     "Two cycles required to send read and write commands")
+    two_cycle_rdwr = Param.Bool(
+        False, "Two cycles required to send read and write commands"
+    )
+
+    def controller(self):
+        """
+        Instantiate the memory controller and bind it to
+        the current interface.
+        """
+        controller = MemCtrl()
+        controller.dram = self
+        return controller
+
 
 # NVM delays and device architecture defined to mimic PCM like memory.
 # Can be configured with DDR4_2400 sharing the channel
@@ -74,10 +86,10 @@ class NVM_2400_1x64(NVMInterface):
     max_pending_writes = 128
     max_pending_reads = 64
 
-    device_rowbuffer_size = '256B'
+    device_rowbuffer_size = "256B"
 
     # 8X capacity compared to DDR4 x4 DIMM with 8Gb devices
-    device_size = '512GiB'
+    device_size = "512GiB"
     # Mimic 64-bit media agnostic DIMM interface
     device_bus_width = 64
     devices_per_rank = 1
@@ -89,16 +101,15 @@ class NVM_2400_1x64(NVMInterface):
     two_cycle_rdwr = True
 
     # 1200 MHz
-    tCK = '0.833ns'
+    tCK = "0.833ns"
 
-    tREAD = '150ns'
-    tWRITE = '500ns';
-    tSEND = '14.16ns';
-    tBURST = '3.332ns';
+    tREAD = "150ns"
+    tWRITE = "500ns"
+    tSEND = "14.16ns"
+    tBURST = "3.332ns"
 
     # Default all bus turnaround and rank bus delay to 2 cycles
     # With DDR data bus, clock = 1200 MHz = 1.666 ns
-    tWTR = '1.666ns';
-    tRTW = '1.666ns';
-    tCS = '1.666ns'
-
+    tWTR = "1.666ns"
+    tRTW = "1.666ns"
+    tCS = "1.666ns"

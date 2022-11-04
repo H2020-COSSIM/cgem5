@@ -24,83 +24,85 @@
 # (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-from m5.objects import (
-    Port,
-    IOXBar,
-    AddrRange,
-)
+from m5.objects import Port, IOXBar, AddrRange
 
-from .mem_mode import MemMode, mem_mode_to_string
 from ...utils.override import overrides
 from .abstract_board import AbstractBoard
-from ..processors.abstract_processor import AbstractProcessor
+from .abstract_system_board import AbstractSystemBoard
+from ..processors.abstract_generator import AbstractGenerator
 from ..memory.abstract_memory_system import AbstractMemorySystem
 from ..cachehierarchies.abstract_cache_hierarchy import AbstractCacheHierarchy
 
 
-from typing import List
+from typing import List, Optional
 
 
-class TestBoard(AbstractBoard):
+class TestBoard(AbstractSystemBoard):
 
     """This is a Testing Board used to run traffic generators on a simple
     architecture.
 
     To work as a traffic generator board, pass a generator as a processor.
+
+    This board does not require a cache hierarchy (it can be none) in which
+    case the processor (generator) will be directly connected to the memory.
+    The clock frequency is only used if there is a cache hierarchy or when
+    using the GUPS generators.
     """
 
     def __init__(
         self,
         clk_freq: str,
-        processor: AbstractProcessor,
+        generator: AbstractGenerator,
         memory: AbstractMemorySystem,
-        cache_hierarchy: AbstractCacheHierarchy,
+        cache_hierarchy: Optional[AbstractCacheHierarchy],
     ):
         super().__init__(
-            clk_freq=clk_freq,
-            processor=processor,
+            clk_freq=clk_freq,  # Only used if cache hierarchy or GUPS-gen
+            processor=generator,
             memory=memory,
             cache_hierarchy=cache_hierarchy,
         )
+        self._set_fullsystem(False)
 
-    @overrides(AbstractBoard)
+    @overrides(AbstractSystemBoard)
     def _setup_board(self) -> None:
         pass
 
-    @overrides(AbstractBoard)
+    @overrides(AbstractSystemBoard)
     def has_io_bus(self) -> bool:
         return False
 
-    @overrides(AbstractBoard)
+    @overrides(AbstractSystemBoard)
     def get_io_bus(self) -> IOXBar:
         raise NotImplementedError(
             "The TestBoard does not have an IO Bus. "
             "Use `has_io_bus()` to check this."
         )
 
-    @overrides(AbstractBoard)
+    @overrides(AbstractSystemBoard)
     def get_dma_ports(self) -> List[Port]:
         return False
 
-    @overrides(AbstractBoard)
+    @overrides(AbstractSystemBoard)
     def get_dma_ports(self) -> List[Port]:
         raise NotImplementedError(
             "The TestBoard does not have DMA Ports. "
             "Use `has_dma_ports()` to check this."
         )
 
-    @overrides(AbstractBoard)
+    @overrides(AbstractSystemBoard)
     def has_coherent_io(self) -> bool:
         return False
 
-    @overrides(AbstractBoard)
+    @overrides(AbstractSystemBoard)
     def get_mem_side_coherent_io_port(self):
         raise NotImplementedError(
             "SimpleBoard does not have any I/O ports. Use has_coherent_io to "
             "check this."
         )
 
-    @overrides(AbstractBoard)
+    @overrides(AbstractSystemBoard)
     def _setup_memory_ranges(self) -> None:
         memory = self.get_memory()
 
@@ -109,6 +111,19 @@ class TestBoard(AbstractBoard):
         self.mem_ranges = [AddrRange(memory.get_size())]
         memory.set_memory_range(self.mem_ranges)
 
-    @overrides(AbstractBoard)
+    @overrides(AbstractSystemBoard)
     def has_dma_ports(self) -> bool:
         return False
+
+    @overrides(AbstractBoard)
+    def _connect_things(self) -> None:
+        super()._connect_things()
+
+        if not self.get_cache_hierarchy():
+            # If we have no caches, then there must be a one-to-one
+            # connection between the generators and the memories.
+            assert len(self.get_processor().get_cores()) == 1
+            assert len(self.get_memory().get_mem_ports()) == 1
+            self.get_processor().get_cores()[0].connect_dcache(
+                self.get_memory().get_mem_ports()[0][1]
+            )

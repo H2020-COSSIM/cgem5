@@ -36,6 +36,7 @@
 #include "arch/amdgpu/vega/insts/inst_util.hh"
 #include "debug/VEGA.hh"
 #include "debug/GPUSync.hh"
+#include "dev/amdgpu/hwreg_defines.hh"
 #include "gpu-compute/shader.hh"
 
 namespace gem5
@@ -1473,6 +1474,68 @@ namespace VegaISA
     {
         panicUnimplemented();
     } // execute
+    // --- Inst_SOP2__S_MUL_HI_U32 class methods ---
+
+    Inst_SOP2__S_MUL_HI_U32::Inst_SOP2__S_MUL_HI_U32(InFmt_SOP2 *iFmt)
+        : Inst_SOP2(iFmt, "s_mul_hi_u32")
+    {
+        setFlag(ALU);
+    } // Inst_SOP2__S_MUL_HI_U32
+
+    Inst_SOP2__S_MUL_HI_U32::~Inst_SOP2__S_MUL_HI_U32()
+    {
+    } // ~Inst_SOP2__S_MUL_HI_U32
+
+    // --- description from .arch file ---
+    // D.u = (S0.u * S1.u) >> 32;
+    void
+    Inst_SOP2__S_MUL_HI_U32::execute(GPUDynInstPtr gpuDynInst)
+    {
+        ConstScalarOperandU32 src0(gpuDynInst, instData.SSRC0);
+        ConstScalarOperandU32 src1(gpuDynInst, instData.SSRC1);
+        ScalarOperandU32 sdst(gpuDynInst, instData.SDST);
+
+        src0.read();
+        src1.read();
+
+        VecElemU64 tmp_dst =
+            ((VecElemU64)src0.rawData() * (VecElemU64)src1.rawData());
+        sdst = (tmp_dst >> 32);
+
+        sdst.write();
+    } // execute
+    // --- Inst_SOP2__S_MUL_HI_I32 class methods ---
+
+    Inst_SOP2__S_MUL_HI_I32::Inst_SOP2__S_MUL_HI_I32(InFmt_SOP2 *iFmt)
+        : Inst_SOP2(iFmt, "s_mul_hi_i32")
+    {
+        setFlag(ALU);
+    } // Inst_SOP2__S_MUL_HI_I32
+
+    Inst_SOP2__S_MUL_HI_I32::~Inst_SOP2__S_MUL_HI_I32()
+    {
+    } // ~Inst_SOP2__S_MUL_HI_I32
+
+    // --- description from .arch file ---
+    // D.u = (S0.u * S1.u) >> 32;
+    void
+    Inst_SOP2__S_MUL_HI_I32::execute(GPUDynInstPtr gpuDynInst)
+    {
+        ConstScalarOperandI32 src0(gpuDynInst, instData.SSRC0);
+        ConstScalarOperandI32 src1(gpuDynInst, instData.SSRC1);
+        ScalarOperandI32 sdst(gpuDynInst, instData.SDST);
+
+        src0.read();
+        src1.read();
+
+        VecElemI64 tmp_src0 =
+            sext<std::numeric_limits<VecElemI64>::digits>(src0.rawData());
+        VecElemI64 tmp_src1 =
+            sext<std::numeric_limits<VecElemI64>::digits>(src1.rawData());
+        sdst = (VecElemI32)((tmp_src0 * tmp_src1) >> 32);
+
+        sdst.write();
+    } // execute
     // --- Inst_SOPK__S_MOVK_I32 class methods ---
 
     Inst_SOPK__S_MOVK_I32::Inst_SOPK__S_MOVK_I32(InFmt_SOPK *iFmt)
@@ -1955,6 +2018,7 @@ namespace VegaISA
     Inst_SOPK__S_GETREG_B32::Inst_SOPK__S_GETREG_B32(InFmt_SOPK *iFmt)
         : Inst_SOPK(iFmt, "s_getreg_b32")
     {
+        setFlag(ALU);
     } // Inst_SOPK__S_GETREG_B32
 
     Inst_SOPK__S_GETREG_B32::~Inst_SOPK__S_GETREG_B32()
@@ -1969,7 +2033,20 @@ namespace VegaISA
     void
     Inst_SOPK__S_GETREG_B32::execute(GPUDynInstPtr gpuDynInst)
     {
-        panicUnimplemented();
+        ScalarRegI16 simm16 = instData.SIMM16;
+        ScalarRegU32 hwregId = simm16 & 0x3f;
+        ScalarRegU32 offset = (simm16 >> 6) & 31;
+        ScalarRegU32 size = ((simm16 >> 11) & 31) + 1;
+
+        ScalarRegU32 hwreg =
+            gpuDynInst->computeUnit()->shader->getHwReg(hwregId);
+        ScalarOperandU32 sdst(gpuDynInst, instData.SDST);
+        sdst.read();
+
+        // Store value from hardware to part of the SDST.
+        ScalarRegU32 mask = (((1U << size) - 1U) << offset);
+        sdst = (hwreg & mask) >> offset;
+        sdst.write();
     } // execute
     // --- Inst_SOPK__S_SETREG_B32 class methods ---
 
@@ -1996,16 +2073,15 @@ namespace VegaISA
         ScalarRegU32 offset = (simm16 >> 6) & 31;
         ScalarRegU32 size = ((simm16 >> 11) & 31) + 1;
 
-        ScalarOperandU32 hwreg(gpuDynInst, hwregId);
+        ScalarRegU32 hwreg =
+            gpuDynInst->computeUnit()->shader->getHwReg(hwregId);
         ScalarOperandU32 sdst(gpuDynInst, instData.SDST);
-        hwreg.read();
         sdst.read();
 
         // Store value from SDST to part of the hardware register.
         ScalarRegU32 mask = (((1U << size) - 1U) << offset);
-        hwreg = ((hwreg.rawData() & ~mask)
-                        | ((sdst.rawData() << offset) & mask));
-        hwreg.write();
+        hwreg = ((hwreg & ~mask) | ((sdst.rawData() << offset) & mask));
+        gpuDynInst->computeUnit()->shader->setHwReg(hwregId, hwreg);
 
         // set MODE register to control the behavior of single precision
         // floating-point numbers: denormal mode or round mode
@@ -2045,19 +2121,18 @@ namespace VegaISA
         ScalarRegU32 offset = (simm16 >> 6) & 31;
         ScalarRegU32 size = ((simm16 >> 11) & 31) + 1;
 
-        ScalarOperandU32 hwreg(gpuDynInst, hwregId);
+        ScalarRegU32 hwreg =
+            gpuDynInst->computeUnit()->shader->getHwReg(hwregId);
         ScalarRegI32 simm32 = extData.imm_u32;
-        hwreg.read();
 
         // Store value from SIMM32 to part of the hardware register.
         ScalarRegU32 mask = (((1U << size) - 1U) << offset);
-        hwreg = ((hwreg.rawData() & ~mask)
-                        | ((simm32 << offset) & mask));
-        hwreg.write();
+        hwreg = ((hwreg & ~mask) | ((simm32 << offset) & mask));
+        gpuDynInst->computeUnit()->shader->setHwReg(hwregId, hwreg);
 
         // set MODE register to control the behavior of single precision
         // floating-point numbers: denormal mode or round mode
-        if (hwregId==1 && size==2
+        if (hwregId==HW_REG_MODE && size==2
                         && (offset==4 || offset==0)) {
             warn_once("Be cautious that s_setreg_imm32_b32 has no real effect "
                             "on FP modes: %s\n", gpuDynInst->disassemble());
@@ -5844,6 +5919,8 @@ namespace VegaISA
     Inst_SMEM__S_MEMTIME::Inst_SMEM__S_MEMTIME(InFmt_SMEM *iFmt)
         : Inst_SMEM(iFmt, "s_memtime")
     {
+        // s_memtime does not issue a memory request
+        setFlag(ALU);
     } // Inst_SMEM__S_MEMTIME
 
     Inst_SMEM__S_MEMTIME::~Inst_SMEM__S_MEMTIME()
@@ -5855,7 +5932,9 @@ namespace VegaISA
     void
     Inst_SMEM__S_MEMTIME::execute(GPUDynInstPtr gpuDynInst)
     {
-        panicUnimplemented();
+        ScalarOperandU64 sdst(gpuDynInst, instData.SDATA);
+        sdst = (ScalarRegU64)gpuDynInst->computeUnit()->curCycle();
+        sdst.write();
     } // execute
     // --- Inst_SMEM__S_MEMREALTIME class methods ---
 
@@ -27320,6 +27399,135 @@ namespace VegaISA
     {
         panicUnimplemented();
     } // execute
+    // --- Inst_VOP3__V_ADD_U32 class methods ---
+
+    Inst_VOP3__V_ADD_U32::Inst_VOP3__V_ADD_U32(InFmt_VOP3A *iFmt)
+        : Inst_VOP3A(iFmt, "v_add_u32", false)
+    {
+        setFlag(ALU);
+    } // Inst_VOP3__V_ADD_U32
+
+    Inst_VOP3__V_ADD_U32::~Inst_VOP3__V_ADD_U32()
+    {
+    } // ~Inst_VOP3__V_ADD_U32
+
+    // --- description from .arch file ---
+    // D.u32 = S0.u32 + S1.u32.
+    void
+    Inst_VOP3__V_ADD_U32::execute(GPUDynInstPtr gpuDynInst)
+    {
+        Wavefront *wf = gpuDynInst->wavefront();
+        ConstVecOperandU32 src0(gpuDynInst, extData.SRC0);
+        ConstVecOperandU32 src1(gpuDynInst, extData.SRC1);
+        VecOperandU32 vdst(gpuDynInst, instData.VDST);
+
+        src0.readSrc();
+        src1.readSrc();
+
+        /**
+         * input modifiers are supported by FP operations only
+         */
+        assert(!(instData.ABS & 0x1));
+        assert(!(instData.ABS & 0x2));
+        assert(!(instData.ABS & 0x4));
+        assert(!(extData.NEG & 0x1));
+        assert(!(extData.NEG & 0x2));
+        assert(!(extData.NEG & 0x4));
+
+        for (int lane = 0; lane < NumVecElemPerVecReg; ++lane) {
+            if (wf->execMask(lane)) {
+                vdst[lane] = src0[lane] + src1[lane];
+            }
+        }
+
+        vdst.write();
+    } // execute
+    // --- Inst_VOP3__V_SUB_U32 class methods ---
+
+    Inst_VOP3__V_SUB_U32::Inst_VOP3__V_SUB_U32(InFmt_VOP3A *iFmt)
+        : Inst_VOP3A(iFmt, "v_sub_u32", false)
+    {
+        setFlag(ALU);
+    } // Inst_VOP3__V_SUB_U32
+
+    Inst_VOP3__V_SUB_U32::~Inst_VOP3__V_SUB_U32()
+    {
+    } // ~Inst_VOP3__V_SUB_U32
+
+    // --- description from .arch file ---
+    // D.u32 = S0.u32 - S1.u32.
+    void
+    Inst_VOP3__V_SUB_U32::execute(GPUDynInstPtr gpuDynInst)
+    {
+        Wavefront *wf = gpuDynInst->wavefront();
+        ConstVecOperandU32 src0(gpuDynInst, extData.SRC0);
+        ConstVecOperandU32 src1(gpuDynInst, extData.SRC1);
+        VecOperandU32 vdst(gpuDynInst, instData.VDST);
+
+        src0.readSrc();
+        src1.readSrc();
+
+        /**
+         * input modifiers are supported by FP operations only
+         */
+        assert(!(instData.ABS & 0x1));
+        assert(!(instData.ABS & 0x2));
+        assert(!(instData.ABS & 0x4));
+        assert(!(extData.NEG & 0x1));
+        assert(!(extData.NEG & 0x2));
+        assert(!(extData.NEG & 0x4));
+
+        for (int lane = 0; lane < NumVecElemPerVecReg; ++lane) {
+            if (wf->execMask(lane)) {
+                vdst[lane] = src0[lane] - src1[lane];
+            }
+        }
+
+        vdst.write();
+    } // execute
+    // --- Inst_VOP3__V_SUBREV_U32 class methods ---
+
+    Inst_VOP3__V_SUBREV_U32::Inst_VOP3__V_SUBREV_U32(InFmt_VOP3A *iFmt)
+        : Inst_VOP3A(iFmt, "v_subrev_u32", false)
+    {
+        setFlag(ALU);
+    } // Inst_VOP3__V_SUBREV_U32
+
+    Inst_VOP3__V_SUBREV_U32::~Inst_VOP3__V_SUBREV_U32()
+    {
+    } // ~Inst_VOP3__V_SUBREV_U32
+
+    // --- description from .arch file ---
+    // D.u32 = S1.u32 - S0.u32.
+    void
+    Inst_VOP3__V_SUBREV_U32::execute(GPUDynInstPtr gpuDynInst)
+    {
+        Wavefront *wf = gpuDynInst->wavefront();
+        ConstVecOperandU32 src0(gpuDynInst, extData.SRC0);
+        ConstVecOperandU32 src1(gpuDynInst, extData.SRC1);
+        VecOperandU32 vdst(gpuDynInst, instData.VDST);
+
+        src0.readSrc();
+        src1.readSrc();
+
+        /**
+         * input modifiers are supported by FP operations only
+         */
+        assert(!(instData.ABS & 0x1));
+        assert(!(instData.ABS & 0x2));
+        assert(!(instData.ABS & 0x4));
+        assert(!(extData.NEG & 0x1));
+        assert(!(extData.NEG & 0x2));
+        assert(!(extData.NEG & 0x4));
+
+        for (int lane = 0; lane < NumVecElemPerVecReg; ++lane) {
+            if (wf->execMask(lane)) {
+                vdst[lane] = src1[lane] - src0[lane];
+            }
+        }
+
+        vdst.write();
+    } // execute
     // --- Inst_VOP3__V_NOP class methods ---
 
     Inst_VOP3__V_NOP::Inst_VOP3__V_NOP(InFmt_VOP3A *iFmt)
@@ -32007,6 +32215,51 @@ namespace VegaISA
         vcc.write();
         vdst.write();
     } // execute
+    // --- Inst_VOP3__V_XAD_U32 class methods ---
+
+    Inst_VOP3__V_XAD_U32::Inst_VOP3__V_XAD_U32(InFmt_VOP3A *iFmt)
+        : Inst_VOP3A(iFmt, "v_xad_u32", false)
+    {
+        setFlag(ALU);
+    } // Inst_VOP3__V_XAD_U32
+
+    Inst_VOP3__V_XAD_U32::~Inst_VOP3__V_XAD_U32()
+    {
+    } // ~Inst_VOP3__V_XAD_U32
+
+    // --- description from .arch file ---
+    // D.u32 = (S0.u32 ^ S1.u32) + S2.u32.
+    void
+    Inst_VOP3__V_XAD_U32::execute(GPUDynInstPtr gpuDynInst)
+    {
+        Wavefront *wf = gpuDynInst->wavefront();
+        ConstVecOperandU32 src0(gpuDynInst, extData.SRC0);
+        ConstVecOperandU32 src1(gpuDynInst, extData.SRC1);
+        ConstVecOperandU32 src2(gpuDynInst, extData.SRC2);
+        VecOperandU32 vdst(gpuDynInst, instData.VDST);
+
+        src0.readSrc();
+        src1.readSrc();
+        src2.readSrc();
+
+        /**
+         * input modifiers are supported by FP operations only
+         */
+        assert(!(instData.ABS & 0x1));
+        assert(!(instData.ABS & 0x2));
+        assert(!(instData.ABS & 0x4));
+        assert(!(extData.NEG & 0x1));
+        assert(!(extData.NEG & 0x2));
+        assert(!(extData.NEG & 0x4));
+
+        for (int lane = 0; lane < NumVecElemPerVecReg; ++lane) {
+            if (wf->execMask(lane)) {
+                vdst[lane] = (src0[lane] ^ src1[lane]) + src2[lane];
+            }
+        }
+
+        vdst.write();
+    } // execute
     // --- Inst_VOP3__V_LSHL_ADD_U32 class methods ---
 
     Inst_VOP3__V_LSHL_ADD_U32::Inst_VOP3__V_LSHL_ADD_U32(InFmt_VOP3A *iFmt)
@@ -33973,6 +34226,10 @@ namespace VegaISA
     Inst_DS__DS_OR_B32::Inst_DS__DS_OR_B32(InFmt_DS *iFmt)
         : Inst_DS(iFmt, "ds_or_b32")
     {
+        setFlag(MemoryRef);
+        setFlag(GroupSegment);
+        setFlag(AtomicOr);
+        setFlag(AtomicNoReturn);
     } // Inst_DS__DS_OR_B32
 
     Inst_DS__DS_OR_B32::~Inst_DS__DS_OR_B32()
@@ -33981,14 +34238,54 @@ namespace VegaISA
 
     // --- description from .arch file ---
     // 32b:
-    // tmp = MEM[ADDR];
     // MEM[ADDR] |= DATA;
-    // RETURN_DATA = tmp.
     void
     Inst_DS__DS_OR_B32::execute(GPUDynInstPtr gpuDynInst)
     {
-        panicUnimplemented();
+        Wavefront *wf = gpuDynInst->wavefront();
+
+        if (gpuDynInst->exec_mask.none()) {
+            wf->decLGKMInstsIssued();
+            return;
+        }
+
+        gpuDynInst->execUnitId = wf->execUnitId;
+        gpuDynInst->latency.init(gpuDynInst->computeUnit());
+        gpuDynInst->latency.set(
+                gpuDynInst->computeUnit()->cyclesToTicks(Cycles(24)));
+        ConstVecOperandU32 addr(gpuDynInst, extData.ADDR);
+        ConstVecOperandU32 data(gpuDynInst, extData.DATA0);
+
+        addr.read();
+        data.read();
+
+        calcAddr(gpuDynInst, addr);
+
+        for (int lane = 0; lane < NumVecElemPerVecReg; ++lane) {
+            if (gpuDynInst->exec_mask[lane]) {
+                (reinterpret_cast<VecElemU32*>(gpuDynInst->a_data))[lane]
+                    = data[lane];
+            }
+        }
+
+        gpuDynInst->computeUnit()->localMemoryPipe.issueRequest(gpuDynInst);
     } // execute
+
+    void
+    Inst_DS__DS_OR_B32::initiateAcc(GPUDynInstPtr gpuDynInst)
+    {
+        Addr offset0 = instData.OFFSET0;
+        Addr offset1 = instData.OFFSET1;
+        Addr offset = (offset1 << 8) | offset0;
+
+        initAtomicAccess<VecElemU32>(gpuDynInst, offset);
+    } // initiateAcc
+
+    void
+    Inst_DS__DS_OR_B32::completeAcc(GPUDynInstPtr gpuDynInst)
+    {
+    } // completeAcc
+
     // --- Inst_DS__DS_XOR_B32 class methods ---
 
     Inst_DS__DS_XOR_B32::Inst_DS__DS_XOR_B32(InFmt_DS *iFmt)
@@ -35467,6 +35764,15 @@ namespace VegaISA
         }
 
         vdst.write();
+
+        /**
+         * This is needed because we treat this instruction as a load
+         * but it's not an actual memory request.
+         * Without this, the destination register never gets marked as
+         * free, leading to a  possible deadlock
+         */
+        wf->computeUnit->vrf[wf->simdId]->
+            scheduleWriteOperandsFromLoad(wf, gpuDynInst);
     } // execute
     // --- Inst_DS__DS_PERMUTE_B32 class methods ---
 
@@ -35541,6 +35847,15 @@ namespace VegaISA
         }
 
         vdst.write();
+
+        /**
+         * This is needed because we treat this instruction as a load
+         * but it's not an actual memory request.
+         * Without this, the destination register never gets marked as
+         * free, leading to a  possible deadlock
+         */
+        wf->computeUnit->vrf[wf->simdId]->
+            scheduleWriteOperandsFromLoad(wf, gpuDynInst);
     } // execute
     // --- Inst_DS__DS_BPERMUTE_B32 class methods ---
 
@@ -35615,6 +35930,15 @@ namespace VegaISA
         }
 
         vdst.write();
+
+        /**
+         * This is needed because we treat this instruction as a load
+         * but it's not an actual memory request.
+         * Without this, the destination register never gets marked as
+         * free, leading to a  possible deadlock
+         */
+        wf->computeUnit->vrf[wf->simdId]->
+            scheduleWriteOperandsFromLoad(wf, gpuDynInst);
     } // execute
 
     // --- Inst_DS__DS_ADD_U64 class methods ---
@@ -37766,8 +38090,51 @@ namespace VegaISA
     void
     Inst_DS__DS_WRITE_B96::execute(GPUDynInstPtr gpuDynInst)
     {
-        panicUnimplemented();
+        Wavefront *wf = gpuDynInst->wavefront();
+        gpuDynInst->execUnitId = wf->execUnitId;
+        gpuDynInst->latency.init(gpuDynInst->computeUnit());
+        gpuDynInst->latency.set(
+                gpuDynInst->computeUnit()->cyclesToTicks(Cycles(24)));
+        ConstVecOperandU32 addr(gpuDynInst, extData.ADDR);
+        ConstVecOperandU32 data0(gpuDynInst, extData.DATA0);
+        ConstVecOperandU32 data1(gpuDynInst, extData.DATA0 + 1);
+        ConstVecOperandU32 data2(gpuDynInst, extData.DATA0 + 2);
+
+        addr.read();
+        data0.read();
+        data1.read();
+        data2.read();
+
+        calcAddr(gpuDynInst, addr);
+
+        for (int lane = 0; lane < NumVecElemPerVecReg; ++lane) {
+            if (gpuDynInst->exec_mask[lane]) {
+                (reinterpret_cast<VecElemU32*>(
+                    gpuDynInst->d_data))[lane * 4] = data0[lane];
+                (reinterpret_cast<VecElemU32*>(
+                    gpuDynInst->d_data))[lane * 4 + 1] = data1[lane];
+                (reinterpret_cast<VecElemU32*>(
+                    gpuDynInst->d_data))[lane * 4 + 2] = data2[lane];
+            }
+        }
+
+        gpuDynInst->computeUnit()->localMemoryPipe.issueRequest(gpuDynInst);
     } // execute
+
+    void
+    Inst_DS__DS_WRITE_B96::initiateAcc(GPUDynInstPtr gpuDynInst)
+    {
+        Addr offset0 = instData.OFFSET0;
+        Addr offset1 = instData.OFFSET1;
+        Addr offset = (offset1 << 8) | offset0;
+
+        initMemWrite<3>(gpuDynInst, offset);
+    } // initiateAcc
+
+    void
+    Inst_DS__DS_WRITE_B96::completeAcc(GPUDynInstPtr gpuDynInst)
+    {
+    } // completeAcc
     // --- Inst_DS__DS_WRITE_B128 class methods ---
 
     Inst_DS__DS_WRITE_B128::Inst_DS__DS_WRITE_B128(InFmt_DS *iFmt)
@@ -37787,8 +38154,55 @@ namespace VegaISA
     void
     Inst_DS__DS_WRITE_B128::execute(GPUDynInstPtr gpuDynInst)
     {
-        panicUnimplemented();
+        Wavefront *wf = gpuDynInst->wavefront();
+        gpuDynInst->execUnitId = wf->execUnitId;
+        gpuDynInst->latency.init(gpuDynInst->computeUnit());
+        gpuDynInst->latency.set(
+                gpuDynInst->computeUnit()->cyclesToTicks(Cycles(24)));
+        ConstVecOperandU32 addr(gpuDynInst, extData.ADDR);
+        ConstVecOperandU32 data0(gpuDynInst, extData.DATA0);
+        ConstVecOperandU32 data1(gpuDynInst, extData.DATA0 + 1);
+        ConstVecOperandU32 data2(gpuDynInst, extData.DATA0 + 2);
+        ConstVecOperandU32 data3(gpuDynInst, extData.DATA0 + 3);
+
+        addr.read();
+        data0.read();
+        data1.read();
+        data2.read();
+        data3.read();
+
+        calcAddr(gpuDynInst, addr);
+
+        for (int lane = 0; lane < NumVecElemPerVecReg; ++lane) {
+            if (gpuDynInst->exec_mask[lane]) {
+                (reinterpret_cast<VecElemU32*>(
+                    gpuDynInst->d_data))[lane * 4] = data0[lane];
+                (reinterpret_cast<VecElemU32*>(
+                    gpuDynInst->d_data))[lane * 4 + 1] = data1[lane];
+                (reinterpret_cast<VecElemU32*>(
+                    gpuDynInst->d_data))[lane * 4 + 2] = data2[lane];
+                (reinterpret_cast<VecElemU32*>(
+                    gpuDynInst->d_data))[lane * 4 + 3] = data3[lane];
+            }
+        }
+
+        gpuDynInst->computeUnit()->localMemoryPipe.issueRequest(gpuDynInst);
     } // execute
+
+    void
+    Inst_DS__DS_WRITE_B128::initiateAcc(GPUDynInstPtr gpuDynInst)
+    {
+        Addr offset0 = instData.OFFSET0;
+        Addr offset1 = instData.OFFSET1;
+        Addr offset = (offset1 << 8) | offset0;
+
+        initMemWrite<4>(gpuDynInst, offset);
+    } // initiateAcc
+
+    void
+    Inst_DS__DS_WRITE_B128::completeAcc(GPUDynInstPtr gpuDynInst)
+    {
+    } // completeAcc
     // --- Inst_DS__DS_READ_B96 class methods ---
 
     Inst_DS__DS_READ_B96::Inst_DS__DS_READ_B96(InFmt_DS *iFmt)
@@ -37807,8 +38221,52 @@ namespace VegaISA
     void
     Inst_DS__DS_READ_B96::execute(GPUDynInstPtr gpuDynInst)
     {
-        panicUnimplemented();
+        Wavefront *wf = gpuDynInst->wavefront();
+        gpuDynInst->execUnitId = wf->execUnitId;
+        gpuDynInst->latency.init(gpuDynInst->computeUnit());
+        gpuDynInst->latency.set(
+                gpuDynInst->computeUnit()->cyclesToTicks(Cycles(24)));
+        ConstVecOperandU32 addr(gpuDynInst, extData.ADDR);
+
+        addr.read();
+
+        calcAddr(gpuDynInst, addr);
+
+        gpuDynInst->computeUnit()->localMemoryPipe.issueRequest(gpuDynInst);
     } // execute
+
+    void
+    Inst_DS__DS_READ_B96::initiateAcc(GPUDynInstPtr gpuDynInst)
+    {
+        Addr offset0 = instData.OFFSET0;
+        Addr offset1 = instData.OFFSET1;
+        Addr offset = (offset1 << 8) | offset0;
+
+        initMemRead<3>(gpuDynInst, offset);
+    }
+
+    void
+    Inst_DS__DS_READ_B96::completeAcc(GPUDynInstPtr gpuDynInst)
+    {
+        VecOperandU32 vdst0(gpuDynInst, extData.VDST);
+        VecOperandU32 vdst1(gpuDynInst, extData.VDST + 1);
+        VecOperandU32 vdst2(gpuDynInst, extData.VDST + 2);
+
+        for (int lane = 0; lane < NumVecElemPerVecReg; ++lane) {
+            if (gpuDynInst->exec_mask[lane]) {
+                vdst0[lane] = (reinterpret_cast<VecElemU32*>(
+                    gpuDynInst->d_data))[lane * 4];
+                vdst1[lane] = (reinterpret_cast<VecElemU32*>(
+                    gpuDynInst->d_data))[lane * 4 + 1];
+                vdst2[lane] = (reinterpret_cast<VecElemU32*>(
+                    gpuDynInst->d_data))[lane * 4 + 2];
+            }
+        }
+
+        vdst0.write();
+        vdst1.write();
+        vdst2.write();
+    }
     // --- Inst_DS__DS_READ_B128 class methods ---
 
     Inst_DS__DS_READ_B128::Inst_DS__DS_READ_B128(InFmt_DS *iFmt)
@@ -37827,8 +38285,56 @@ namespace VegaISA
     void
     Inst_DS__DS_READ_B128::execute(GPUDynInstPtr gpuDynInst)
     {
-        panicUnimplemented();
+        Wavefront *wf = gpuDynInst->wavefront();
+        gpuDynInst->execUnitId = wf->execUnitId;
+        gpuDynInst->latency.init(gpuDynInst->computeUnit());
+        gpuDynInst->latency.set(
+                gpuDynInst->computeUnit()->cyclesToTicks(Cycles(24)));
+        ConstVecOperandU32 addr(gpuDynInst, extData.ADDR);
+
+        addr.read();
+
+        calcAddr(gpuDynInst, addr);
+
+        gpuDynInst->computeUnit()->localMemoryPipe.issueRequest(gpuDynInst);
     } // execute
+
+    void
+    Inst_DS__DS_READ_B128::initiateAcc(GPUDynInstPtr gpuDynInst)
+    {
+        Addr offset0 = instData.OFFSET0;
+        Addr offset1 = instData.OFFSET1;
+        Addr offset = (offset1 << 8) | offset0;
+
+        initMemRead<4>(gpuDynInst, offset);
+    } // initiateAcc
+
+    void
+    Inst_DS__DS_READ_B128::completeAcc(GPUDynInstPtr gpuDynInst)
+    {
+        VecOperandU32 vdst0(gpuDynInst, extData.VDST);
+        VecOperandU32 vdst1(gpuDynInst, extData.VDST + 1);
+        VecOperandU32 vdst2(gpuDynInst, extData.VDST + 2);
+        VecOperandU32 vdst3(gpuDynInst, extData.VDST + 3);
+
+        for (int lane = 0; lane < NumVecElemPerVecReg; ++lane) {
+            if (gpuDynInst->exec_mask[lane]) {
+                vdst0[lane] = (reinterpret_cast<VecElemU32*>(
+                    gpuDynInst->d_data))[lane * 4];
+                vdst1[lane] = (reinterpret_cast<VecElemU32*>(
+                    gpuDynInst->d_data))[lane * 4 + 1];
+                vdst2[lane] = (reinterpret_cast<VecElemU32*>(
+                    gpuDynInst->d_data))[lane * 4 + 2];
+                vdst3[lane] = (reinterpret_cast<VecElemU32*>(
+                    gpuDynInst->d_data))[lane * 4 + 3];
+            }
+        }
+
+        vdst0.write();
+        vdst1.write();
+        vdst2.write();
+        vdst3.write();
+    } // completeAcc
     // --- Inst_MUBUF__BUFFER_LOAD_FORMAT_X class methods ---
 
     Inst_MUBUF__BUFFER_LOAD_FORMAT_X
@@ -39639,7 +40145,13 @@ namespace VegaISA
         gpuDynInst->execUnitId = wf->execUnitId;
         gpuDynInst->latency.init(gpuDynInst->computeUnit());
         gpuDynInst->latency.set(gpuDynInst->computeUnit()->clockPeriod());
-        gpuDynInst->computeUnit()->globalMemoryPipe.issueRequest(gpuDynInst);
+
+        if (gpuDynInst->executedAs() == enums::SC_GLOBAL) {
+            gpuDynInst->computeUnit()->globalMemoryPipe.
+                issueRequest(gpuDynInst);
+        } else {
+            fatal("Unsupported scope for flat instruction.\n");
+        }
     } // execute
 
     void
@@ -39692,7 +40204,13 @@ namespace VegaISA
         gpuDynInst->execUnitId = wf->execUnitId;
         gpuDynInst->latency.init(gpuDynInst->computeUnit());
         gpuDynInst->latency.set(gpuDynInst->computeUnit()->clockPeriod());
-        gpuDynInst->computeUnit()->globalMemoryPipe.issueRequest(gpuDynInst);
+
+        if (gpuDynInst->executedAs() == enums::SC_GLOBAL) {
+            gpuDynInst->computeUnit()->globalMemoryPipe.
+                issueRequest(gpuDynInst);
+        } else {
+            fatal("Unsupported scope for flat instruction.\n");
+        }
     } // execute
     void
     Inst_MUBUF__BUFFER_WBINVL1_VOL::initiateAcc(GPUDynInstPtr gpuDynInst)

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010-2014, 2016-2020 ARM Limited
+ * Copyright (c) 2010-2014, 2016-2020,2022 Arm Limited
  * Copyright (c) 2013 Advanced Micro Devices, Inc.
  * All rights reserved
  *
@@ -302,17 +302,17 @@ ArmStaticInst::printIntReg(std::ostream &os, RegIndex reg_idx,
     if (opWidth == 0)
         opWidth = intWidth;
     if (aarch64) {
-        if (reg_idx == INTREG_UREG0)
+        if (reg_idx == int_reg::Ureg0)
             ccprintf(os, "ureg0");
-        else if (reg_idx == INTREG_SPX)
+        else if (reg_idx == int_reg::Spx)
             ccprintf(os, "%s%s", (opWidth == 32) ? "w" : "", "sp");
-        else if (reg_idx == INTREG_X31)
+        else if (reg_idx == int_reg::X31)
             ccprintf(os, "%szr", (opWidth == 32) ? "w" : "x");
         else
             ccprintf(os, "%s%d", (opWidth == 32) ? "w" : "x", reg_idx);
     } else {
         switch (reg_idx) {
-          case PCReg:
+          case int_reg::Pc:
             ccprintf(os, "pc");
             break;
           case StackPointerReg:
@@ -363,7 +363,7 @@ ArmStaticInst::printVecPredReg(std::ostream &os, RegIndex reg_idx) const
 void
 ArmStaticInst::printCCReg(std::ostream &os, RegIndex reg_idx) const
 {
-    ccprintf(os, "cc_%s", ArmISA::ccRegName[reg_idx]);
+    ccprintf(os, "cc_%s", ArmISA::cc_reg::RegName[reg_idx]);
 }
 
 void
@@ -496,15 +496,15 @@ ArmStaticInst::printMemSymbol(std::ostream &os,
 
 void
 ArmStaticInst::printShiftOperand(std::ostream &os,
-                                     IntRegIndex rm,
+                                     RegIndex rm,
                                      bool immShift,
                                      uint32_t shiftAmt,
-                                     IntRegIndex rs,
+                                     RegIndex rs,
                                      ArmShiftType type) const
 {
     bool firstOp = false;
 
-    if (rm != INTREG_ZERO) {
+    if (rm != int_reg::Zero) {
         printIntReg(os, rm);
     }
 
@@ -560,7 +560,7 @@ ArmStaticInst::printShiftOperand(std::ostream &os,
 
 void
 ArmStaticInst::printExtendOperand(bool firstOperand, std::ostream &os,
-                                  IntRegIndex rm, ArmExtendType type,
+                                  RegIndex rm, ArmExtendType type,
                                   int64_t shiftAmt) const
 {
     if (!firstOperand)
@@ -592,21 +592,21 @@ ArmStaticInst::printExtendOperand(bool firstOperand, std::ostream &os,
 
 void
 ArmStaticInst::printDataInst(std::ostream &os, bool withImm,
-        bool immShift, bool s, IntRegIndex rd, IntRegIndex rn,
-        IntRegIndex rm, IntRegIndex rs, uint32_t shiftAmt,
+        bool immShift, bool s, RegIndex rd, RegIndex rn,
+        RegIndex rm, RegIndex rs, uint32_t shiftAmt,
         ArmShiftType type, uint64_t imm) const
 {
     printMnemonic(os, s ? "s" : "");
     bool firstOp = true;
 
     // Destination
-    if (rd != INTREG_ZERO) {
+    if (rd != int_reg::Zero) {
         firstOp = false;
         printIntReg(os, rd);
     }
 
     // Source 1.
-    if (rn != INTREG_ZERO) {
+    if (rn != int_reg::Zero) {
         if (!firstOp)
             os << ", ";
         firstOp = false;
@@ -656,14 +656,14 @@ ArmStaticInst::advSIMDFPAccessTrap64(ExceptionLevel el) const
 {
     switch (el) {
       case EL1:
-        return std::make_shared<SupervisorTrap>(machInst, 0x1E00000,
-                                                EC_TRAPPED_SIMD_FP);
+        return std::make_shared<SupervisorTrap>(
+            machInst, 0x1E00000, ExceptionClass::TRAPPED_SIMD_FP);
       case EL2:
-        return std::make_shared<HypervisorTrap>(machInst, 0x1E00000,
-                                                EC_TRAPPED_SIMD_FP);
+        return std::make_shared<HypervisorTrap>(
+            machInst, 0x1E00000, ExceptionClass::TRAPPED_SIMD_FP);
       case EL3:
-        return std::make_shared<SecureMonitorTrap>(machInst, 0x1E00000,
-                                                   EC_TRAPPED_SIMD_FP);
+        return std::make_shared<SecureMonitorTrap>(
+            machInst, 0x1E00000, ExceptionClass::TRAPPED_SIMD_FP);
 
       default:
         panic("Illegal EL in advSIMDFPAccessTrap64\n");
@@ -678,7 +678,7 @@ ArmStaticInst::checkFPAdvSIMDTrap64(ThreadContext *tc, CPSR cpsr) const
         bool trap_el2 = false;
         CPTR cptr_en_check = tc->readMiscReg(MISCREG_CPTR_EL2);
         HCR hcr = tc->readMiscReg(MISCREG_HCR_EL2);
-        if (HaveVirtHostExt(tc) && hcr.e2h == 0x1) {
+        if (HaveExt(tc, ArmExtension::FEAT_VHE) && hcr.e2h == 0x1) {
             switch (cptr_en_check.fpen) {
               case 0:
               case 2:
@@ -715,8 +715,9 @@ ArmStaticInst::checkFPAdvSIMDEnabled64(ThreadContext *tc,
                                        CPSR cpsr, CPACR cpacr) const
 {
     const ExceptionLevel el = currEL(tc);
-    if ((el == EL0 && cpacr.fpen != 0x3) ||
-        (el == EL1 && !(cpacr.fpen & 0x1)))
+    if (((el == EL0 && cpacr.fpen != 0x3) ||
+        (el == EL1 && !(cpacr.fpen & 0x1))) &&
+        !ELIsInHost(tc, el))
         return advSIMDFPAccessTrap64(EL1);
 
     return checkFPAdvSIMDTrap64(tc, cpsr);
@@ -780,11 +781,11 @@ ArmStaticInst::checkAdvSIMDOrFPEnabled32(ThreadContext *tc,
             if (cur_el == EL2) {
                 return std::make_shared<UndefinedInstruction>(
                     machInst, iss,
-                    EC_TRAPPED_HCPTR, mnemonic);
+                    ExceptionClass::TRAPPED_HCPTR, mnemonic);
             } else {
                 return std::make_shared<HypervisorTrap>(
                     machInst, iss,
-                    EC_TRAPPED_HCPTR);
+                    ExceptionClass::TRAPPED_HCPTR);
             }
 
         }
@@ -851,13 +852,15 @@ ArmStaticInst::checkForWFxTrap32(ThreadContext *tc,
           case EL1:
             return std::make_shared<UndefinedInstruction>(
                 machInst, iss,
-                EC_TRAPPED_WFI_WFE, mnemonic);
+                ExceptionClass::TRAPPED_WFI_WFE, mnemonic);
           case EL2:
-            return std::make_shared<HypervisorTrap>(machInst, iss,
-                                                    EC_TRAPPED_WFI_WFE);
+            return std::make_shared<HypervisorTrap>(
+                machInst, iss,
+                ExceptionClass::TRAPPED_WFI_WFE);
           case EL3:
-            return std::make_shared<SecureMonitorTrap>(machInst, iss,
-                                                       EC_TRAPPED_WFI_WFE);
+            return std::make_shared<SecureMonitorTrap>(
+                machInst, iss,
+                ExceptionClass::TRAPPED_WFI_WFE);
           default:
             panic("Unrecognized Exception Level: %d\n", targetEL);
         }
@@ -882,14 +885,17 @@ ArmStaticInst::checkForWFxTrap64(ThreadContext *tc,
                               0x1E00000;  /* WFI Instruction syndrome */
         switch (targetEL) {
           case EL1:
-            return std::make_shared<SupervisorTrap>(machInst, iss,
-                                                    EC_TRAPPED_WFI_WFE);
+            return std::make_shared<SupervisorTrap>(
+                machInst, iss,
+                ExceptionClass::TRAPPED_WFI_WFE);
           case EL2:
-            return std::make_shared<HypervisorTrap>(machInst, iss,
-                                                    EC_TRAPPED_WFI_WFE);
+            return std::make_shared<HypervisorTrap>(
+                machInst, iss,
+                ExceptionClass::TRAPPED_WFI_WFE);
           case EL3:
-            return std::make_shared<SecureMonitorTrap>(machInst, iss,
-                                                       EC_TRAPPED_WFI_WFE);
+            return std::make_shared<SecureMonitorTrap>(
+                machInst, iss,
+                ExceptionClass::TRAPPED_WFI_WFE);
           default:
             panic("Unrecognized Exception Level: %d\n", targetEL);
         }
@@ -971,7 +977,7 @@ ArmStaticInst::undefinedFault32(ThreadContext *tc,
         // ArmFault class.
         return std::make_shared<UndefinedInstruction>(
             machInst, 0,
-            EC_UNKNOWN, mnemonic);
+            ExceptionClass::UNKNOWN, mnemonic);
     }
 }
 
@@ -982,11 +988,14 @@ ArmStaticInst::undefinedFault64(ThreadContext *tc,
     switch (pstateEL) {
       case EL0:
       case EL1:
-        return std::make_shared<SupervisorTrap>(machInst, 0, EC_UNKNOWN);
+        return std::make_shared<SupervisorTrap>(
+            machInst, 0, ExceptionClass::UNKNOWN);
       case EL2:
-        return std::make_shared<HypervisorTrap>(machInst, 0, EC_UNKNOWN);
+        return std::make_shared<HypervisorTrap>(
+            machInst, 0, ExceptionClass::UNKNOWN);
       case EL3:
-        return std::make_shared<SecureMonitorTrap>(machInst, 0, EC_UNKNOWN);
+        return std::make_shared<SecureMonitorTrap>(
+            machInst, 0, ExceptionClass::UNKNOWN);
       default:
         panic("Unrecognized Exception Level: %d\n", pstateEL);
         break;
@@ -1000,12 +1009,14 @@ ArmStaticInst::sveAccessTrap(ExceptionLevel el) const
 {
     switch (el) {
       case EL1:
-        return std::make_shared<SupervisorTrap>(machInst, 0, EC_TRAPPED_SVE);
+        return std::make_shared<SupervisorTrap>(
+            machInst, 0, ExceptionClass::TRAPPED_SVE);
       case EL2:
-        return std::make_shared<HypervisorTrap>(machInst, 0, EC_TRAPPED_SVE);
+        return std::make_shared<HypervisorTrap>(
+            machInst, 0, ExceptionClass::TRAPPED_SVE);
       case EL3:
-        return std::make_shared<SecureMonitorTrap>(machInst, 0,
-                                                   EC_TRAPPED_SVE);
+        return std::make_shared<SecureMonitorTrap>(
+            machInst, 0, ExceptionClass::TRAPPED_SVE);
 
       default:
         panic("Illegal EL in sveAccessTrap\n");
@@ -1031,7 +1042,7 @@ ArmStaticInst::checkSveEnabled(ThreadContext *tc, CPSR cpsr, CPACR cpacr) const
     if (el <= EL2 && EL2Enabled(tc)) {
         CPTR cptr_en_check = tc->readMiscReg(MISCREG_CPTR_EL2);
         HCR hcr = tc->readMiscReg(MISCREG_HCR_EL2);
-        if (HaveVirtHostExt(tc) && hcr.e2h) {
+        if (HaveExt(tc, ArmExtension::FEAT_VHE) && hcr.e2h) {
             if (((cptr_en_check.zen & 0x1) == 0x0) ||
                 (cptr_en_check.zen == 0x1 && el == EL0 &&
                  hcr.tge == 0x1)) {

@@ -46,12 +46,12 @@ from m5.objects import Root
 from gem5.utils.requires import requires
 from gem5.components.boards.riscv_board import RiscvBoard
 from gem5.components.memory import DualChannelDDR4_2400
-from gem5.components.processors.simple_processor import (
-    SimpleProcessor,
-)
+from gem5.components.processors.simple_processor import SimpleProcessor
 from gem5.components.processors.cpu_types import CPUTypes
 from gem5.isas import ISA
-from gem5.coherence_protocol import CoherenceProtocol
+from gem5.simulate.simulator import Simulator
+from gem5.resources.workload import Workload
+
 from gem5.resources.resource import Resource, CustomDiskImageResource #COSSIM
 
 import os, argparse #COSSIM
@@ -63,22 +63,17 @@ default_disk   = 'riscv-ubuntu.img'
 
 # This runs a check to ensure the gem5 binary is compiled for RISCV.
 
-requires(
-    isa_required=ISA.RISCV,
-)
+requires(isa_required=ISA.RISCV)
 
 # With RISCV, we use simple caches.
-from gem5.components.cachehierarchies.classic\
-    .private_l1_private_l2_cache_hierarchy import (
+from gem5.components.cachehierarchies.classic.private_l1_private_l2_cache_hierarchy import (
     PrivateL1PrivateL2CacheHierarchy,
 )
+
 # Here we setup the parameters of the l1 and l2 caches.
 cache_hierarchy = PrivateL1PrivateL2CacheHierarchy(
-    l1d_size="16kB",
-    l1i_size="16kB",
-    l2_size="256kB",
+    l1d_size="16kB", l1i_size="16kB", l2_size="256kB"
 )
-
 
 
 # ----------------------------- Add Options (COSSIM) ---------------------------- #
@@ -127,14 +122,13 @@ parser.add_argument("--mem-size", action="store", type=str,
 args = parser.parse_args()
 # ---------------------------- Parse Options --------------------------- #
 
-
 # Memory: Dual Channel DDR4 2400 DRAM device.
-memory = DualChannelDDR4_2400(size = args.mem_size)
+
+memory = DualChannelDDR4_2400(size=args.mem_size)
 
 # Here we setup the processor. We use a simple processor.
 processor = SimpleProcessor(
-    cpu_type=CPUTypes.TIMING,
-    num_cores=args.num_cores,
+    cpu_type=CPUTypes.TIMING, isa=ISA.RISCV, num_cores=args.num_cores
 )
 
 # Here we setup the board. The RiscvBoard allows for Full-System RISCV
@@ -150,13 +144,11 @@ board.platform.attachRISCVTerminal(args.cossim, args.nodeNum) #COSSIM
 
 board.readScript(args.script) #COSSIM
 
-# Here we set the Full System workload.
-
-# The `set_kernel_disk_workload` function for the RiscvBoard accepts a
-# RISCV bootloader and a disk image. Once the system successfully boots, it
-# encounters an `m5_exit instruction encountered`. We stop the simulation then.
-# When the simulation has ended you may inspect `m5out/system.pc.com_1.device`
-# to see the stdout.
+# Here we a full system workload: "riscv-ubuntu-20.04-boot" which boots
+# Ubuntu 20.04. Once the system successfully boots it encounters an `m5_exit`
+# instruction which stops the simulation. When the simulation has ended you may
+# inspect `m5out/system.pc.com_1.device` to see the stdout.
+#board.set_workload(Workload("riscv-ubuntu-20.04-boot"))
 
 # ----------------------------- Add specific kernel & image (COSSIM) ---------------------------- #
 kernel_path = os.getenv('M5_PATH') + "/binaries/" + args.kernel
@@ -193,36 +185,5 @@ if args.etherdump: #COSSIM
     board.etherdump = EtherDump(file=args.etherdump)
     board.etherlink.dump = board.etherdump
 
-
-
-root = Root(full_system=True, system=board)
-
-m5.instantiate()
-
-# We simulate the system till we encounter `m5_exit instruction encountered`.
-
-exit_event = m5.simulate()
-
-# We check whether the simulation ended with `m5_exit instruction encountered`
-
-if exit_event.getCause() == "m5_exit instruction encountered":
-    # We acknowledge the user that the boot was successful.
-
-    print("Successfully completed booting!")
-else:
-    # `m5_exit instruction encountered` was never encountered. We exit the
-    # program unsuccessfully.
-
-    print("The startup was not completed successfully!",)
-    print(
-    "Exiting @ tick {} because {}."\
-        .format(m5.curTick(), exit_event.getCause())
-    )
-    exit(-1)
-
-# We are done with the simulation. We exit the program now.
-
-print(
-"Exiting @ tick {} because {}."\
-    .format(m5.curTick(), exit_event.getCause())
-)
+simulator = Simulator(board=board)
+simulator.run()

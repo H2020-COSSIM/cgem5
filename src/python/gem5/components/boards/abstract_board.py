@@ -1,4 +1,4 @@
-# Copyright (c) 2021 The Regents of the University of California
+# Copyright (c) 2022 The Regents of the University of California
 # All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
@@ -25,10 +25,13 @@
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 from abc import ABCMeta, abstractmethod
+import inspect
 
 from .mem_mode import MemMode, mem_mode_to_string
+from ...resources.workload import AbstractWorkload
 
 from m5.objects import (
+    AddrRange,
     System,
     Port,
     IOXBar,
@@ -37,10 +40,10 @@ from m5.objects import (
     VoltageDomain,
 )
 
-from typing import List
+from typing import List, Optional, Sequence, Tuple
 
 
-class AbstractBoard(System):
+class AbstractBoard:
     """The abstract board interface.
 
     Boards are used as the object which can connect together all other
@@ -65,16 +68,20 @@ class AbstractBoard(System):
         self,
         clk_freq: str,
         processor: "AbstractProcessor",
-        memory: "AbstractMemory",
-        cache_hierarchy: "AbstractCacheHierarchy",
+        memory: "AbstractMemorySystem",
+        cache_hierarchy: Optional["AbstractCacheHierarchy"],
     ) -> None:
-        super().__init__()
         """
         :param clk_freq: The clock frequency for this board.
         :param processor: The processor for this board.
         :param memory: The memory for this board.
-        :param cache_hierarchy: The Cachie Hierarchy for this board.
+        :param cache_hierarchy: The Cache Hierarchy for this board.
+                                In some boards caches can be optional. If so,
+                                that board must override `_connect_things`.
         """
+
+        if not isinstance(self, System):
+            raise Exception("A gem5 stdlib board must inherit from System.")
 
         # Set up the clock domain and the voltage domain.
         self.clk_domain = SrcClockDomain()
@@ -84,7 +91,20 @@ class AbstractBoard(System):
         # Set the processor, memory, and cache hierarchy.
         self.processor = processor
         self.memory = memory
-        self.cache_hierarchy = cache_hierarchy
+        self._cache_hierarchy = cache_hierarchy
+        if cache_hierarchy is not None:
+            self.cache_hierarchy = cache_hierarchy
+
+        # This variable determines whether the board is to be executed in
+        # full-system or syscall-emulation mode. This is set when the workload
+        # is defined. Whether or not the board is to be run in FS mode is
+        # determined by which kind of workload is set.
+        self._is_fs = None
+
+        # This variable is used to record the checkpoint directory which is
+        # set when declaring the board's workload and then used by the
+        # Simulator module.
+        self._checkpoint = None
 
         # Setup the board and memory system's memory ranges.
         self._setup_memory_ranges()
@@ -92,8 +112,9 @@ class AbstractBoard(System):
         # Setup board properties unique to the board being constructed.
         self._setup_board()
 
-        # Connect the memory, processor, and cache hierarchy.
-        self._connect_things()
+        # A private variable to record whether `_connect_things` has been
+        # been called.
+        self._connect_things_called = False
 
     def get_processor(self) -> "AbstractProcessor":
         """Get the processor connected to the board.
@@ -109,12 +130,20 @@ class AbstractBoard(System):
         """
         return self.memory
 
-    def get_cache_hierarchy(self) -> "AbstractCacheHierarchy":
+    def get_mem_ports(self) -> Sequence[Tuple[AddrRange, Port]]:
+        """Get the memory ports exposed on this board
+
+        Note: The ports should be returned such that the address ranges are
+        in ascending order.
+        """
+        return self.get_memory().get_mem_ports()
+
+    def get_cache_hierarchy(self) -> Optional["AbstractCacheHierarchy"]:
         """Get the cache hierarchy connected to the board.
 
         :returns: The cache hierarchy.
         """
-        return self.cache_hierarchy
+        return self._cache_hierarchy
 
     def get_cache_line_size(self) -> int:
         """Get the size of the cache line.
@@ -139,6 +168,66 @@ class AbstractBoard(System):
         :returns: The clock domain.
         """
         return self.clk_domain
+
+    def _set_fullsystem(self, is_fs: bool) -> None:
+        """
+        Sets whether this board is to be run in FS or SE mode. This is set
+        via the workload (the workload specified determines whether this will
+        be run in FS mode or not). This is not intended to be set in a
+        configuration script ergo, it's private.
+
+        :param is_fs: Set whether the board is to be run in FS mode or SE mode.
+        """
+        self._is_fs = is_fs
+
+    def is_fullsystem(self) -> bool:
+        """
+        Returns True if the board is to be run in FS mode. Otherwise the board
+        is to be run in Se mode. An exception will be thrown if this has not
+        been set.
+
+        This function is used by the Simulator module to setup the simulation
+        correctly.
+        """
+        if self._is_fs == None:
+            raise Exception(
+                "The workload for this board not yet to be set. "
+                "Whether the board is to be executed in FS or SE "
+                "mode is determined by which 'set workload' "
+                "function is run."
+            )
+        return self._is_fs
+
+    def set_workload(self, workload: AbstractWorkload) -> None:
+        """
+        Set the workload for this board to run.
+
+        This function will take the workload specified and run the correct
+        workload function (e.g., `set_kernel_disk_workload`) with the correct
+        parameters
+
+        :params workload: The workload to be set to this board.
+        """
+
+        try:
+            func = getattr(self, workload.get_function_str())
+        except AttributeError:
+            raise Exception(
+                "This board does not support this workload type. "
+                f"This board does not contain the necessary "
+                f"`{workload.get_function_str()}` function"
+            )
+
+        func_signature = inspect.signature(func)
+        for param_name in workload.get_parameters().keys():
+            if param_name not in func_signature.parameters.keys():
+                raise Exception(
+                    "Workload specifies non-existent parameter "
+                    f"`{param_name}` for function "
+                    f"`{workload.get_function_str()}` "
+                )
+
+        func(**workload.get_parameters())
 
     @abstractmethod
     def _setup_board(self) -> None:
@@ -253,13 +342,68 @@ class AbstractBoard(System):
         * The processor is incorporated after the cache hierarchy due to a bug
         noted here: https://gem5.atlassian.net/browse/GEM5-1113. Until this
         bug is fixed, this ordering must be maintained.
+        * Once this function is called `_connect_things_called` *must* be set
+        to `True`.
         """
+
+        if self._connect_things_called:
+            raise Exception(
+                "The `_connect_things` function has already been called."
+            )
 
         # Incorporate the memory into the motherboard.
         self.get_memory().incorporate_memory(self)
 
         # Incorporate the cache hierarchy for the motherboard.
-        self.get_cache_hierarchy().incorporate_cache(self)
+        if self.get_cache_hierarchy():
+            self.get_cache_hierarchy().incorporate_cache(self)
 
         # Incorporate the processor into the motherboard.
         self.get_processor().incorporate_processor(self)
+
+        self._connect_things_called = True
+
+    def _post_instantiate(self):
+        """Called to set up anything needed after m5.instantiate"""
+        self.get_processor()._post_instantiate()
+        if self.get_cache_hierarchy():
+            self.get_cache_hierarchy()._post_instantiate()
+        self.get_memory()._post_instantiate()
+
+    def _pre_instantiate(self):
+        """To be called immediately before m5.instantiate. This is where
+        `_connect_things` is executed by default."""
+
+        # Connect the memory, processor, and cache hierarchy.
+        self._connect_things()
+
+    def _connect_things_check(self):
+        """
+        Here we check that connect things has been called and throw an
+        Exception if it has not.
+
+        Since v22.1 `_connect_things` function has
+        been moved from the AbstractBoard constructor to the
+        `_pre_instantation` function. Users who have used the gem5 stdlib
+        components (i.e., boards which inherit from AbstractBoard) and the
+        Simulator module should notice no change. Those who do not use the
+        Simulator module and instead called `m5.instantiate` directly must
+        call `AbstractBoard._pre_instantation` prior so `_connect_things` is
+        called. In order to avoid confusion, this check has been incorporated
+        and the Exception thrown explains the fix needed to convert old scripts
+        to function with v22.1.
+
+        This function is called in `AbstractSystemBoard.createCCObject` and
+        ArmBoard.createCCObject`. Both these functions override
+        `SimObject.createCCObject`. We can not do that here as AbstractBoard
+        does not inherit form System.
+        """
+        if not self._connect_things_called:
+            raise Exception(
+                """
+AbstractBoard's `_connect_things` function has not been called. This is likely
+due to not running a board outside of the gem5 Standard Library Simulator
+module. If this is the case, this can be resolved by calling
+`<AbstractBoard>._pre_instantiate()` prior to `m5.instantiate()`.
+"""
+            )

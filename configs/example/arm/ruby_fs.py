@@ -1,4 +1,4 @@
-# Copyright (c) 2016-2017, 2020-2021 Arm Limited
+# Copyright (c) 2016-2017, 2020-2022 Arm Limited
 # All rights reserved.
 #
 # The license below extends only to copyright in the software and shall
@@ -40,36 +40,31 @@ from m5.objects import *
 from m5.options import *
 import argparse
 
-m5.util.addToPath('../..')
+m5.util.addToPath("../..")
 
 from common import MemConfig
 from common import ObjectList
 from common import Options
 from common import SysPaths
-from common.cores.arm import HPI
+from common.cores.arm import O3_ARM_v7a, HPI
 from ruby import Ruby
 
 import devices
 
 
-default_kernel = 'vmlinux.arm64'
-default_disk = 'linaro-minimal-aarch64.img'
-default_root_device = '/dev/vda1'
+default_kernel = "vmlinux.arm64"
+default_disk = "linaro-minimal-aarch64.img"
+default_root_device = "/dev/vda1"
 
 
-# Pre-defined CPU configurations. Each tuple must be ordered as : (cpu_class,
-# l1_icache_class, l1_dcache_class, walk_cache_class, l2_Cache_class). Any of
-# the cache class may be 'None' if the particular cache is not present.
+# Pre-defined CPU configurations.
 cpu_types = {
-
-    "noncaching" : ( NonCachingSimpleCPU, None, None, None),
-    "minor" : (MinorCPU,
-               devices.L1I, devices.L1D,
-               devices.L2),
-    "hpi" : ( HPI.HPI,
-              HPI.HPI_ICache, HPI.HPI_DCache,
-              HPI.HPI_L2)
+    "noncaching": NonCachingSimpleCPU,
+    "minor": MinorCPU,
+    "hpi": HPI.HPI,
+    "o3": O3_ARM_v7a.O3_ARM_v7a_3,
 }
+
 
 def create_cow_image(name):
     """Helper function to create a Copy-on-Write disk image"""
@@ -78,44 +73,58 @@ def create_cow_image(name):
 
     return image
 
+
 def config_ruby(system, args):
     cpus = []
     for cluster in system.cpu_cluster:
         for cpu in cluster.cpus:
             cpus.append(cpu)
 
-    Ruby.create_system(args, True, system, system.iobus,
-                       system._dma_ports, system.realview.bootmem,
-                       cpus)
+    Ruby.create_system(
+        args,
+        True,
+        system,
+        system.iobus,
+        system._dma_ports,
+        system.realview.bootmem,
+        cpus,
+    )
 
     # Create a seperate clock domain for Ruby
     system.ruby.clk_domain = SrcClockDomain(
-        clock = args.ruby_clock,
-        voltage_domain = system.voltage_domain)
+        clock=args.ruby_clock, voltage_domain=system.voltage_domain
+    )
+
 
 def create(args):
-    ''' Create and configure the system object. '''
+    """Create and configure the system object."""
 
     if args.script and not os.path.isfile(args.script):
         print("Error: Bootscript %s does not exist" % args.script)
         sys.exit(1)
 
-    cpu_class = cpu_types[args.cpu][0]
+    cpu_class = cpu_types[args.cpu]
     mem_mode = cpu_class.memory_mode()
 
-    system = devices.ArmRubySystem(args.mem_size,
-                                   mem_mode=mem_mode,
-                                   workload=ArmFsLinux(
-                                       object_file=
-                                       SysPaths.binary(args.kernel)),
-                                   readfile=args.script)
+    system = devices.ArmRubySystem(
+        args.mem_size,
+        mem_mode=mem_mode,
+        workload=ArmFsLinux(object_file=SysPaths.binary(args.kernel)),
+        readfile=args.script,
+    )
 
     # Add CPU clusters to the system
     system.cpu_cluster = [
-        devices.CpuCluster(system,
-                           args.num_cpus,
-                           args.cpu_freq, "1.0V",
-                           *cpu_types[args.cpu]),
+        devices.CpuCluster(
+            system,
+            args.num_cpus,
+            args.cpu_freq,
+            "1.0V",
+            cpu_class,
+            None,
+            None,
+            None,
+        )
     ]
 
     # Add the PCI devices we need for this system. The base system
@@ -126,7 +135,7 @@ def create(args):
         # disk. Attach the disk image using gem5's Copy-on-Write
         # functionality to avoid writing changes to the stored copy of
         # the disk image.
-        PciVirtIO(vio=VirtIOBlock(image=create_cow_image(args.disk_image))),
+        PciVirtIO(vio=VirtIOBlock(image=create_cow_image(args.disk_image)))
     ]
 
     # Attach the PCI devices to the system. The helper method in the
@@ -147,8 +156,9 @@ def create(args):
         system.workload.dtb_filename = args.dtb
     else:
         # No DTB specified: autogenerate DTB
-        system.workload.dtb_filename = \
-            os.path.join(m5.options.outdir, 'system.dtb')
+        system.workload.dtb_filename = os.path.join(
+            m5.options.outdir, "system.dtb"
+        )
         system.generateDtb(system.workload.dtb_filename)
 
     # Linux boot command flags
@@ -195,41 +205,73 @@ def run(args):
 def main():
     parser = argparse.ArgumentParser()
 
-    parser.add_argument("--dtb", type=str, default=None,
-                        help="DTB file to load")
-    parser.add_argument("--kernel", type=str, default=default_kernel,
-                        help="Linux kernel")
-    parser.add_argument("--disk-image", type=str,
-                        default=default_disk,
-                        help="Disk to instantiate")
-    parser.add_argument("--root-device", type=str,
-                        default=default_root_device,
-                        help="OS device name for root partition (default: {})"
-                             .format(default_root_device))
-    parser.add_argument("--script", type=str, default="",
-                        help = "Linux bootscript")
-    parser.add_argument("--cpu", choices=list(cpu_types.keys()),
-                        default="minor",
-                        help="CPU model to use")
+    parser.add_argument(
+        "--dtb", type=str, default=None, help="DTB file to load"
+    )
+    parser.add_argument(
+        "--kernel", type=str, default=default_kernel, help="Linux kernel"
+    )
+    parser.add_argument(
+        "--disk-image",
+        type=str,
+        default=default_disk,
+        help="Disk to instantiate",
+    )
+    parser.add_argument(
+        "--root-device",
+        type=str,
+        default=default_root_device,
+        help="OS device name for root partition (default: {})".format(
+            default_root_device
+        ),
+    )
+    parser.add_argument(
+        "--script", type=str, default="", help="Linux bootscript"
+    )
+    parser.add_argument(
+        "--cpu",
+        choices=list(cpu_types.keys()),
+        default="minor",
+        help="CPU model to use",
+    )
     parser.add_argument("--cpu-freq", type=str, default="4GHz")
     parser.add_argument("-n", "--num-cpus", type=int, default=1)
     parser.add_argument("--checkpoint", action="store_true")
     parser.add_argument("--restore", type=str, default=None)
 
-    parser.add_argument("--mem-type", default="DDR3_1600_8x8",
-                        choices=ObjectList.mem_list.get_names(),
-                        help = "type of memory to use")
-    parser.add_argument("--mem-channels", type=int, default=1,
-                        help = "number of memory channels")
-    parser.add_argument("--mem-ranks", type=int, default=None,
-                        help = "number of memory ranks per channel")
     parser.add_argument(
-        "--mem-size", action="store", type=str, default="2GiB",
-        help="Specify the physical memory size (single memory)")
-    parser.add_argument("--enable-dram-powerdown", action="store_true",
-                        help="Enable low-power states in DRAMInterface")
-    parser.add_argument("--mem-channels-intlv", type=int, default=0,
-                        help="Memory channels interleave")
+        "--mem-type",
+        default="DDR3_1600_8x8",
+        choices=ObjectList.mem_list.get_names(),
+        help="type of memory to use",
+    )
+    parser.add_argument(
+        "--mem-channels", type=int, default=1, help="number of memory channels"
+    )
+    parser.add_argument(
+        "--mem-ranks",
+        type=int,
+        default=None,
+        help="number of memory ranks per channel",
+    )
+    parser.add_argument(
+        "--mem-size",
+        action="store",
+        type=str,
+        default="2GiB",
+        help="Specify the physical memory size (single memory)",
+    )
+    parser.add_argument(
+        "--enable-dram-powerdown",
+        action="store_true",
+        help="Enable low-power states in DRAMInterface",
+    )
+    parser.add_argument(
+        "--mem-channels-intlv",
+        type=int,
+        default=0,
+        help="Memory channels interleave",
+    )
 
     parser.add_argument("--num-dirs", type=int, default=1)
     parser.add_argument("--num-l2caches", type=int, default=1)

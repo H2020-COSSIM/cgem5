@@ -26,21 +26,21 @@
 
 from m5.params import *
 from m5.proxy import *
-from m5.objects.Device import BasicPioDevice
+from m5.objects.Device import PioDevice
 from m5.objects.IntPin import IntSourcePin
 from m5.objects.PS2 import *
 
-class I8042(BasicPioDevice):
-    type = 'I8042'
-    cxx_class = 'gem5::X86ISA::I8042'
+
+class I8042(PioDevice):
+    type = "I8042"
+    cxx_class = "gem5::X86ISA::I8042"
     cxx_header = "dev/x86/i8042.hh"
 
-    # This isn't actually used for anything here.
-    pio_addr = 0x0
-    data_port = Param.Addr('Data port address')
-    command_port = Param.Addr('Command/status port address')
-    mouse_int_pin = IntSourcePin('Pin to signal the mouse has data')
-    keyboard_int_pin = IntSourcePin('Pin to signal the keyboard has data')
+    pio_latency = Param.Latency("100ns", "Programmed IO latency")
+    data_port = Param.Addr("Data port address")
+    command_port = Param.Addr("Command/status port address")
+    mouse_int_pin = IntSourcePin("Pin to signal the mouse has data")
+    keyboard_int_pin = IntSourcePin("Pin to signal the keyboard has data")
 
     keyboard = Param.PS2Device(PS2Keyboard(vnc=NULL), "PS/2 keyboard device")
     mouse = Param.PS2Device(PS2Mouse(), "PS/2 mouse device")

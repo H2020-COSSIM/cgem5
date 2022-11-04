@@ -208,7 +208,7 @@ HLA_GEM5::resign()
                 D.Out(pdTerm, "Federation destruction granted.");
                 break ;
             }
-            catch (RTI::FederatesCurrentlyJoined) {
+            catch (RTI::FederatesCurrentlyJoined const&) {
                 sleep(5);
             }
         }
@@ -508,7 +508,7 @@ HLA_GEM5::setTimeRegulation(bool start_constrained, bool start_regulating)
                     regulating = true ;
                     break ;
                 }
-                catch (RTI::FederationTimeAlreadyPassed) {
+                catch (RTI::FederationTimeAlreadyPassed const&) {
                     rtiamb.queryFederateTime(localTime);
 
                     RTIfedTime requestTime(((RTIfedTime&)localTime).getTime());
@@ -520,13 +520,13 @@ HLA_GEM5::setTimeRegulation(bool start_constrained, bool start_regulating)
                         try {
                             tick();
                         }
-                        catch (RTI::RTIinternalError) {
+                        catch (RTI::RTIinternalError const&) {
                             printf("RTIinternalError Raised in tick.\n");
                             exit(-1);
                         }
                     }
                 }
-                catch (RTI::RTIinternalError) {
+                catch (RTI::RTIinternalError const&) {
                     printf("RTIinternalError Raised in setTimeRegulating.\n");
                     exit(-1);
                 }

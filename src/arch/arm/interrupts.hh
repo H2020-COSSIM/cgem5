@@ -47,6 +47,7 @@
 #include "arch/generic/interrupts.hh"
 #include "cpu/thread_context.hh"
 #include "debug/Interrupt.hh"
+#include "enums/ArmExtension.hh"
 #include "params/ArmInterrupts.hh"
 
 namespace gem5
@@ -132,14 +133,14 @@ class Interrupts : public BaseInterrupts
     bool
     checkInterrupts() const override
     {
-        HCR  hcr  = tc->readMiscReg(MISCREG_HCR);
+        HCR  hcr  = tc->readMiscReg(MISCREG_HCR_EL2);
 
         if (!(intStatus || hcr.va || hcr.vi || hcr.vf))
             return false;
 
         CPSR cpsr = tc->readMiscReg(MISCREG_CPSR);
 
-        bool no_vhe = !HaveVirtHostExt(tc);
+        bool no_vhe = !HaveExt(tc, ArmExtension::FEAT_VHE);
         bool amo, fmo, imo;
         if (hcr.tge == 1){
             amo =  (no_vhe || hcr.e2h == 0);
@@ -235,10 +236,10 @@ class Interrupts : public BaseInterrupts
     {
         assert(checkInterrupts());
 
-        HCR  hcr  = tc->readMiscReg(MISCREG_HCR);
+        HCR  hcr  = tc->readMiscReg(MISCREG_HCR_EL2);
         CPSR cpsr = tc->readMiscReg(MISCREG_CPSR);
 
-        bool no_vhe = !HaveVirtHostExt(tc);
+        bool no_vhe = !HaveExt(tc, ArmExtension::FEAT_VHE);
         bool amo, fmo, imo;
         if (hcr.tge == 1){
             amo =  (no_vhe || hcr.e2h == 0);
