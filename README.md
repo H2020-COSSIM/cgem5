@@ -70,7 +70,7 @@ Refer to the [LICENSE](LICENSE) and [COPYING](COPYING) files included. Individua
 
 #### Authors
 
-* Nikolaos Tampouratzis (ntampouratzis@isc.tuc.gr)
+* Nikolaos Tampouratzis (tampouratzis@exapsys.eu)
 
 Please contact for any questions.
 
