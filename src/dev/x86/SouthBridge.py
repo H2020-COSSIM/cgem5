@@ -39,7 +39,6 @@ from m5.SimObject import SimObject
 
 from m5.objects.Ethernet import NSGigE, IGbE_igb, IGbE_e1000 #COSSIM
 
-
 def x86IOAddress(port):
     IO_address_space_base = 0x8000000000000000
     return IO_address_space_base + port

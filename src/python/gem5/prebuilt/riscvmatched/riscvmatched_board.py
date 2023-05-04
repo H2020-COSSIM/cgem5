@@ -184,6 +184,9 @@ class RISCVMatchedBoard(
         else:
             pass
 
+    def readScript(self, script):
+        self.readfile = script #COSSIM
+
     def _setup_io_devices(self) -> None:
         """Connect the I/O devices to the I/O bus in FS mode."""
         if self._fs:
@@ -578,6 +581,7 @@ class RISCVMatchedBoard(
         readfile_contents: Optional[str] = None,
         kernel_args: Optional[List[str]] = None,
         exit_on_work_items: bool = True,
+        fast_boot_ubuntu: Optional[bool] = False, #COSSIM
     ) -> None:
         self.workload = RiscvLinux()
         KernelDiskWorkload.set_kernel_disk_workload(
@@ -589,4 +593,5 @@ class RISCVMatchedBoard(
             readfile_contents=readfile_contents,
             kernel_args=kernel_args,
             exit_on_work_items=exit_on_work_items,
+            fast_boot_ubuntu=fast_boot_ubuntu, #COSSIM
         )

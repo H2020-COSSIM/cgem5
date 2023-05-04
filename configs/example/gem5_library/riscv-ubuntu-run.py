@@ -59,7 +59,7 @@ import os, argparse #COSSIM
 from m5.objects import EtherLink, COSSIMEtherLink, EtherDump #COSSIM
 
 default_kernel = 'riscv-bootloader-vmlinux-5.10-PCI' #COSSIM
-default_disk   = 'riscv-ubuntu.img'
+default_disk   = 'riscv-ubuntu.img' #COSSIM
 
 # This runs a check to ensure the gem5 binary is compiled for RISCV.
 
@@ -74,7 +74,6 @@ from gem5.components.cachehierarchies.classic.private_l1_private_l2_cache_hierar
 cache_hierarchy = PrivateL1PrivateL2CacheHierarchy(
     l1d_size="16kB", l1i_size="16kB", l2_size="256kB"
 )
-
 
 # ----------------------------- Add Options (COSSIM) ---------------------------- #
 parser = argparse.ArgumentParser()
@@ -124,11 +123,11 @@ args = parser.parse_args()
 
 # Memory: Dual Channel DDR4 2400 DRAM device.
 
-memory = DualChannelDDR4_2400(size=args.mem_size)
+memory = DualChannelDDR4_2400(size="3GB")
 
 # Here we setup the processor. We use a simple processor.
 processor = SimpleProcessor(
-    cpu_type=CPUTypes.TIMING, isa=ISA.RISCV, num_cores=args.num_cores
+    cpu_type=CPUTypes.TIMING, isa=ISA.RISCV, num_cores=2
 )
 
 # Here we setup the board. The RiscvBoard allows for Full-System RISCV

@@ -79,8 +79,7 @@ RegClass floatRegClass(FloatRegClass, FloatRegClassName, 0, debug::FloatRegs);
 } // anonymous namespace
 
 ISA::ISA(const Params &p) : BaseISA(p), system(NULL),
-    _decoderFlavor(p.decoderFlavor), pmu(p.pmu), impdefAsNop(p.impdef_nop),
-    afterStartup(false)
+    _decoderFlavor(p.decoderFlavor), pmu(p.pmu), impdefAsNop(p.impdef_nop)
 {
     _regClasses.push_back(&flatIntRegClass);
     _regClasses.push_back(&floatRegClass);
@@ -513,8 +512,6 @@ ISA::startup()
             tc->setHtmCheckpointPtr(std::move(cpt));
         }
     }
-
-    afterStartup = true;
 }
 
 void
@@ -527,15 +524,10 @@ ISA::setupThreadContext()
 
     selfDebug->init(tc);
 
-    Gicv3 *gicv3 = dynamic_cast<Gicv3 *>(system->getGIC());
-    if (!gicv3)
-        return;
-
-    if (!gicv3CpuInterface)
-        gicv3CpuInterface.reset(gicv3->getCPUInterface(tc->contextId()));
-
-    gicv3CpuInterface->setISA(this);
-    gicv3CpuInterface->setThreadContext(tc);
+    if (auto gicv3_ifc = getGICv3CPUInterface(tc); gicv3_ifc) {
+        gicv3_ifc->setISA(this);
+        gicv3_ifc->setThreadContext(tc);
+    }
 }
 
 void
@@ -2011,8 +2003,26 @@ ISA::getGenericTimer()
 BaseISADevice &
 ISA::getGICv3CPUInterface()
 {
-    panic_if(!gicv3CpuInterface, "GICV3 cpu interface is not registered!");
+    if (gicv3CpuInterface)
+        return *gicv3CpuInterface.get();
+
+    auto gicv3_ifc = getGICv3CPUInterface(tc);
+    panic_if(!gicv3_ifc, "The system does not have a GICv3 irq controller\n");
+    gicv3CpuInterface.reset(gicv3_ifc);
+
     return *gicv3CpuInterface.get();
+}
+
+BaseISADevice*
+ISA::getGICv3CPUInterface(ThreadContext *tc)
+{
+    assert(system);
+    Gicv3 *gicv3 = dynamic_cast<Gicv3 *>(system->getGIC());
+    if (gicv3) {
+        return gicv3->getCPUInterface(tc->contextId());
+    } else {
+        return nullptr;
+    }
 }
 
 bool

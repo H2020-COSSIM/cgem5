@@ -7,7 +7,7 @@ ulimit -c unlimited
 m5 resetstats
 
 # Here you can put your application
-/etc/init.d/xinetd start
+
 # END Here you can put your application
 
 exec /bin/bash

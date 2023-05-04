@@ -27,13 +27,13 @@
 from datetime import datetime
 from typing import Dict, List, Optional, Union
 
-from .jsonserializable import JsonSerializable
+from .abstract_stat import AbstractStat
 from .group import Group
 from .statistic import Statistic
 from .timeconversion import TimeConversion
 
 
-class SimStat(JsonSerializable):
+class SimStat(AbstractStat):
     """
     Contains all the statistics for a given simulation.
     """

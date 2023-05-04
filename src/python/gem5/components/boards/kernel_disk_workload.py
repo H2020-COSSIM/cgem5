@@ -142,7 +142,7 @@ class KernelDiskWorkload:
         kernel_args: Optional[List[str]] = None,
         exit_on_work_items: bool = True,
         checkpoint: Optional[Union[Path, AbstractResource]] = None,
-        fast_boot_ubuntu: Optional[bool] = False,
+        fast_boot_ubuntu: Optional[bool] = False, #COSSIM
     ) -> None:
         """
         This function allows the setting of a full-system run with a Kernel
@@ -184,6 +184,7 @@ class KernelDiskWorkload:
             root_value=self.get_default_kernel_root_val(disk_image=disk_image)
         )
         
+        #COSSIM
         if (fast_boot_ubuntu):
             self.workload.command_line += ' init=/root/gem5_init.sh'
 

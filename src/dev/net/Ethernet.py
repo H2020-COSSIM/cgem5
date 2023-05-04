@@ -96,6 +96,7 @@ class DistEtherLink(SimObject):
     dist_sync_on_pseudo_op = Param.Bool(False, "Start sync with pseudo_op")
     num_nodes = Param.UInt32("2", "Number of simulate nodes")
 
+
 class COSSIMEtherLink(SimObject):
     type = 'COSSIMEtherLink'
     cxx_header = "dev/net/COSSIMetherlink.hh"

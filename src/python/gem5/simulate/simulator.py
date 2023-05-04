@@ -27,7 +27,7 @@
 import m5
 import m5.ticks
 from m5.stats import addStatVisitor
-from m5.stats.gem5stats import get_simstat
+from m5.ext.pystats.simstat import SimStat
 from m5.objects import Root
 from m5.util import warn
 
@@ -47,7 +47,6 @@ from .exit_event_generators import (
 from .exit_event import ExitEvent
 from ..components.boards.abstract_board import AbstractBoard
 from ..components.processors.switchable_processor import SwitchableProcessor
-from ..components.processors.cpu_types import CPUTypes
 
 
 class Simulator:
@@ -88,7 +87,7 @@ class Simulator:
         board: AbstractBoard,
         full_system: Optional[bool] = None,
         on_exit_event: Optional[
-            Dict[Union[str, ExitEvent], Generator[Optional[bool], None, None]]
+            Dict[ExitEvent, Generator[Optional[bool], None, None]]
         ] = None,
         expected_execution_order: Optional[List[ExitEvent]] = None,
         checkpoint_path: Optional[Path] = None,
@@ -158,6 +157,7 @@ class Simulator:
             * ExitEvent.WORKEND: exit simulation
             * ExitEvent.USER_INTERRUPT: exit simulation
             * ExitEvent.MAX_TICK: exit simulation
+            * ExitEvent.SCHEDULED_TICK: exit simulation
             * ExitEvent.SIMPOINT_BEGIN: reset stats
             * ExitEvent.MAX_INSTS: exit simulation
 
@@ -198,6 +198,7 @@ class Simulator:
             )(),
             ExitEvent.USER_INTERRUPT: exit_generator(),
             ExitEvent.MAX_TICK: exit_generator(),
+            ExitEvent.SCHEDULED_TICK: exit_generator(),
             ExitEvent.SIMPOINT_BEGIN: warn_default_decorator(
                 reset_stats_generator,
                 "simpoint begin",
@@ -236,9 +237,7 @@ class Simulator:
 
         self._checkpoint_path = checkpoint_path
 
-    def schedule_simpoint(
-        self, simpoint_start_insts: List[int], schedule_at_init: bool = False
-    ) -> None:
+    def schedule_simpoint(self, simpoint_start_insts: List[int]) -> None:
         """
         Schedule SIMPOINT_BEGIN exit events
 
@@ -246,45 +245,50 @@ class Simulator:
 
         :param simpoint_start_insts: a list of number of instructions
         indicating the starting point of the simpoints
-        :param schedule_at_init: if it is True, schedule the events in the init
-        stage of the core, else, schedule the events during the simulation
         """
         if self._board.get_processor().get_num_cores() > 1:
             warn("SimPoints only work with one core")
         self._board.get_processor().get_cores()[0].set_simpoint(
-            simpoint_start_insts, schedule_at_init
+            simpoint_start_insts, self._instantiated
         )
 
-    def schedule_max_insts(
-        self, inst: int, schedule_at_init: bool = False
-    ) -> None:
+    def schedule_max_insts(self, inst: int) -> None:
         """
-        Schedule a MAX_INSTS exit event when any thread in the current core
-        reaches the given number of instructions
+        Schedule a MAX_INSTS exit event when any thread in any core reaches the
+        given number of instructions.
 
-        :param insts: a number of instructions
-        :param schedule_at_init: if it is True, schedule the event in the init
-        stage of the core, else, schedule the event during the simulation
+        :param insts: a number of instructions to run to.
         """
-        self._board.get_processor().get_cores()[0].set_inst_stop_any_thread(
-            inst, schedule_at_init
-        )
+        for core in self._board.get_processor().get_cores():
+            core._set_inst_stop_any_thread(inst, self._instantiated)
 
     def get_stats(self) -> Dict:
         """
         Obtain the current simulation statistics as a Dictionary, conforming
         to a JSON-style schema.
 
-        **Warning:** Will throw an Exception if called before `run()`. The
-        board must be initialized before obtaining statistics
+        :raises Exception: An exception is raised if this function is called
+        before `run()`. The board must be initialized before obtaining
+        statistics.
+        """
+
+        return self.get_simstats().to_json()
+
+    def get_simstats(self) -> SimStat:
+        """
+        Obtains the SimStat of the current simulation.
+
+        :raises Exception: An exception is raised if this function is called
+        before `run()`. The board must be initialized before obtaining
+        statistics.
         """
 
         if not self._instantiated:
             raise Exception(
-                "Cannot obtain simulation statistics prior to inialization."
+                "Cannot obtain simulation statistics prior to initialization."
             )
 
-        return get_simstat(self._root).to_json()
+        return m5.stats.gem5stats.get_simstat(self._root)
 
     def add_text_stats_output(self, path: str) -> None:
         """
@@ -437,7 +441,7 @@ class Simulator:
         :param max_ticks: The maximum number of ticks to execute per simulation
         run. If this max_ticks value is met, a MAX_TICK exit event is
         received, if another simulation exit event is met the tick count is
-        reset. This is the **maximum number of ticks per simululation run**.
+        reset. This is the **maximum number of ticks per simulation run**.
         """
 
         # Check to ensure no banned module has been imported.

@@ -49,6 +49,7 @@ from gem5.components.processors.cpu_types import CPUTypes
 from gem5.isas import ISA
 from gem5.utils.requires import requires
 from gem5.resources.resource import Resource, CustomDiskImageResource #COSSIM
+from gem5.resources.resource import Resource
 from gem5.simulate.simulator import Simulator
 
 import os, argparse #COSSIM
@@ -56,7 +57,7 @@ import os, argparse #COSSIM
 from m5.objects import EtherLink, COSSIMEtherLink, EtherDump #COSSIM
 
 default_kernel = 'riscv-bootloader-vmlinux-5.10-PCI' #COSSIM
-default_disk   = 'riscv-disk-img'
+default_disk   = 'riscv-disk-img' #COSSIM
 
 # Run a check to ensure the right version of gem5 is being used.
 requires(isa_required=ISA.RISCV)
@@ -67,7 +68,6 @@ requires(isa_required=ISA.RISCV)
 cache_hierarchy = PrivateL1PrivateL2CacheHierarchy(
     l1d_size="32KiB", l1i_size="32KiB", l2_size="512KiB"
 )
-
 
 # ----------------------------- Add Options (COSSIM) ---------------------------- #
 parser = argparse.ArgumentParser()
@@ -117,11 +117,11 @@ args = parser.parse_args()
 # ---------------------------- Parse Options --------------------------- #
 
 # Setup the system memory.
-memory = SingleChannelDDR3_1600(size = args.mem_size)
+memory = SingleChannelDDR3_1600()
 
 # Setup a single core Processor.
 processor = SimpleProcessor(
-    cpu_type=CPUTypes.TIMING, isa=ISA.RISCV, num_cores=args.num_cores
+    cpu_type=CPUTypes.TIMING, isa=ISA.RISCV, num_cores=1
 )
 
 # Setup the board.
@@ -137,10 +137,10 @@ board.platform.attachRISCVTerminal(args.cossim, args.nodeNum) #COSSIM
 board.readScript(args.script) #COSSIM
 
 # Set the Full System workload.
-board.set_kernel_disk_workload(
-    kernel=Resource("riscv-bootloader-vmlinux-5.10"),
-    disk_image=Resource("riscv-disk-img"),
-)
+#board.set_kernel_disk_workload(
+#    kernel=Resource("riscv-bootloader-vmlinux-5.10"),
+#    disk_image=Resource("riscv-disk-img"),
+#)
 
 # ----------------------------- Add specific kernel & image (COSSIM) ---------------------------- #
 kernel_path = os.getenv('M5_PATH') + "/binaries/" + args.kernel

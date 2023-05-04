@@ -140,7 +140,6 @@ class HiFive(Platform):
     # Set to 0 if using a pci interrupt for Uart instead
     uart_int_id = Param.Int(0xA, "PLIC Uart interrupt ID")
     
-    
     def attachRISCVTerminal(self, cossim_enabled=False, nodeNum=0): #COSSIM
         if cossim_enabled:
             self.terminal = Terminal(port=(3000+nodeNum))

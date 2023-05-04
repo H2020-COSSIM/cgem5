@@ -175,6 +175,7 @@ def create(args):
 
     return system
 
+
 def addEthernet(system, options): #COSSIM
     # create NIC
     dev = IGbE_e1000()
@@ -200,7 +201,6 @@ def addStandAloneEthernet(system, options): #COSSIM
     if options.etherdump:
         system.etherdump = EtherDump(file=options.etherdump)
         system.etherlink.dump = system.etherdump
-
 
 def run(args):
     # Remove existing files from previous simulation (COSSIM)
@@ -234,7 +234,7 @@ def run(args):
             print ("Power results are calculated with xml file: " + McPATXml + "\n")
             os.system("$GEM5/runMcPat.sh " + str(NodeNum) + " " + str(McPATXml) + " &")
     # END Execute the McPat Script (COSSIM)
-
+    
     sys.exit(event.getCode())
 
 
@@ -305,7 +305,7 @@ def main():
     )
     parser.add_argument("--checkpoint", action="store_true")
     parser.add_argument("--restore", type=str, default=None)
-
+    
     #COSSIM Options
     parser.add_argument("--cossim", action="store_true",
                       help="COSSIM distributed gem5 simulation.")
@@ -338,12 +338,12 @@ def main():
 
     root = Root(full_system=True)
     root.system = create(args)
-    
+
     if args.cossim:                    #COSSIM
         addEthernet(root.system, args) #COSSIM
     else:
         addStandAloneEthernet(root.system, args) #COSSIM
-
+    
     if args.restore is not None:
         m5.instantiate(args.restore)
     else:

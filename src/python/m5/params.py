@@ -1,7 +1,6 @@
 # Copyright (c) 2012-2014, 2017-2019, 2021 Arm Limited
 # All rights reserved.
 #
-#
 # ----------------------------------------------------------------------------
 # Copyright (c) 2022, H2020 COSSIM.
 # Copyright (c) 2022, Exascale Performance Systems (EXAPSYS)
@@ -1900,7 +1899,6 @@ class ConvertFromNanoSecToTicks(float,ParamValue):
     @classmethod
     def cxx_ini_parse(self, code, src, dest, ret):
         code('%s (std::istringstream(%s) >> %s).eof();' % (ret, src, dest))
-
 
 #
 # "Constants"... handy aliases for various values.

@@ -141,7 +141,6 @@ class RiscvBoard(AbstractSystemBoard, KernelDiskWorkload):
         self._on_chip_devices = [self.platform.clint, self.platform.plic]
         self._off_chip_devices = [self.platform.uart, self.disk, self.rng]
         
-        
     def readScript(self, script):
         self.readfile = script #COSSIM
 

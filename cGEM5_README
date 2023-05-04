@@ -22,3 +22,5 @@ The following changes have been performed in order to integrate GEM5 with the ot
 18. Changing the file /gem5/configs/example/gem5_library/riscv-ubuntu-run.py
 19. Changing the file /gem5/src/python/gem5/components/boards/riscv_board.py
 20. Changing the file /gem5/src/python/gem5/components/boards/kernel_disk_workload.py
+21. Changing the file /gem5/src/python/gem5/prebuilt/riscvmatched/riscvmatched_board.py
+22. Changing the file /gem5/configs/example/gem5_library/riscvmatched-fs.py

@@ -81,6 +81,7 @@ else:
   print ("HLA option is disabled. You must define the CERTI_BINARY_DIRECTORY variable to enable COSSIM.")
   COSSIM_enabled = 0
 
+
 build_env = list(env['CONF'].items())
 
 from code_formatter import code_formatter
@@ -661,7 +662,6 @@ envs = {
 envs['debug'].Append(CPPDEFINES=['DEBUG', 'TRACING_ON=1'])
 envs['opt'].Append(CCFLAGS=['-g'], CPPDEFINES=['TRACING_ON=1'])
 envs['fast'].Append(CPPDEFINES=['NDEBUG', 'TRACING_ON=0'])
-
 
 #Add HLA shared object for COSSIM Impementation
 if COSSIM_enabled:

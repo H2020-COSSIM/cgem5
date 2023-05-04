@@ -364,10 +364,10 @@ ISA::readMiscReg(RegIndex idx)
             // upon its read produces the same effect as well.
             STATUS status = readMiscRegNoEffect(idx);
             uint64_t sd_bit = \
-                (status.xs == 3) | (status.fs == 3) | (status.vs == 3);
+                (status.xs == 3) || (status.fs == 3) || (status.vs == 3);
             // We assume RV64 here, updating the SD bit at index 63.
             status.sd = sd_bit;
-            setMiscReg(idx, status);
+            setMiscRegNoEffect(idx, status);
 
             return readMiscRegNoEffect(idx);
         }

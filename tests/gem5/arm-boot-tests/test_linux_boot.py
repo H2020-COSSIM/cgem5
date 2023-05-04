@@ -77,16 +77,12 @@ arm-boot-test"
 
     if mem_system == "chi":
         protocol_to_use = "CHI"
-        isa_to_use = constants.arm_tag
     elif mem_system == "mesi_two_level":
         protocol_to_use = None
-        isa_to_use = constants.all_compiled_tag
     elif mem_system == "mi_example":
         protocol_to_use = "MI_example"
-        isa_to_use = constants.arm_tag
     else:
         protocol_to_use = None
-        isa_to_use = constants.all_compiled_tag
 
     gem5_verify_config(
         name=name,
@@ -100,7 +96,7 @@ arm-boot-test"
             "arm_boot_exit_run.py",
         ),
         config_args=config_args,
-        valid_isas=(isa_to_use,),
+        valid_isas=(constants.all_compiled,),
         valid_hosts=constants.supported_hosts,
         length=length,
         protocol=protocol_to_use,
@@ -154,14 +150,6 @@ test_boot(
     to_tick=10000000000,
 )
 
-test_boot(
-    cpu="timing",
-    num_cpus=2,
-    mem_system="chi",
-    memory_class="DualChannelDDR4_2400",
-    length=constants.quick_tag,
-    to_tick=10000000000,
-)
 
 test_boot(
     cpu="timing",
@@ -172,45 +160,13 @@ test_boot(
     to_tick=10000000000,
 )
 
-test_boot(
-    cpu="timing",
-    num_cpus=2,
-    mem_system="mi_example",
-    memory_class="DualChannelDDR4_2400",
-    length=constants.quick_tag,
-    to_tick=10000000000,
-)
 
 #### The long (nightly) tests ####
 
 test_boot(
     cpu="atomic",
-    num_cpus=1,
-    mem_system="classic",
-    memory_class="SingleChannelDDR3_1600",
-    length=constants.long_tag,
-)
-
-test_boot(
-    cpu="timing",
-    num_cpus=1,
-    mem_system="classic",
-    memory_class="SingleChannelDDR3_2133",
-    length=constants.long_tag,
-)
-
-test_boot(
-    cpu="o3",
-    num_cpus=1,
-    mem_system="classic",
-    memory_class="DualChannelDDR3_1600",
-    length=constants.long_tag,
-)
-
-test_boot(
-    cpu="timing",
     num_cpus=4,
-    mem_system="classic",
+    mem_system="no_cache",
     memory_class="HBM2Stack",
     length=constants.long_tag,
 )
@@ -218,39 +174,7 @@ test_boot(
 test_boot(
     cpu="timing",
     num_cpus=2,
-    mem_system="classic",
-    memory_class="DualChannelDDR4_2400",
-    length=constants.long_tag,
-)
-
-test_boot(
-    cpu="timing",
-    num_cpus=2,
-    mem_system="no_cache",
-    memory_class="DualChannelDDR4_2400",
-    length=constants.long_tag,
-)
-
-test_boot(
-    cpu="timing",
-    num_cpus=2,
     mem_system="chi",
-    memory_class="DualChannelDDR4_2400",
-    length=constants.long_tag,
-)
-
-test_boot(
-    cpu="timing",
-    num_cpus=2,
-    mem_system="mesi_two_level",
-    memory_class="DualChannelDDR4_2400",
-    length=constants.long_tag,
-)
-
-test_boot(
-    cpu="timing",
-    num_cpus=2,
-    mem_system="mi_example",
     memory_class="DualChannelDDR4_2400",
     length=constants.long_tag,
 )

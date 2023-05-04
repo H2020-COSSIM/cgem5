@@ -225,6 +225,8 @@ PySource('gem5.prebuilt', 'gem5/prebuilt/__init__.py')
 PySource('gem5.prebuilt.demo', 'gem5/prebuilt/demo/__init__.py')
 PySource('gem5.prebuilt.demo', 'gem5/prebuilt/demo/x86_demo_board.py')
 PySource('gem5.prebuilt.riscvmatched',
+    'gem5/prebuilt/riscvmatched/__init__.py')
+PySource('gem5.prebuilt.riscvmatched',
     'gem5/prebuilt/riscvmatched/riscvmatched_board.py')
 PySource('gem5.prebuilt.riscvmatched',
     'gem5/prebuilt/riscvmatched/riscvmatched_cache.py')
@@ -241,6 +243,14 @@ PySource('gem5.utils', 'gem5/utils/__init__.py')
 PySource('gem5.utils', 'gem5/utils/filelock.py')
 PySource('gem5.utils', 'gem5/utils/override.py')
 PySource('gem5.utils', 'gem5/utils/requires.py')
+PySource('gem5.utils.multiprocessing',
+    'gem5/utils/multiprocessing/__init__.py')
+PySource('gem5.utils.multiprocessing',
+    'gem5/utils/multiprocessing/_command_line.py')
+PySource('gem5.utils.multiprocessing',
+    'gem5/utils/multiprocessing/context.py')
+PySource('gem5.utils.multiprocessing',
+    'gem5/utils/multiprocessing/popen_spawn_gem5.py')
 
 PySource('', 'importer.py')
 PySource('m5', 'm5/__init__.py')
@@ -275,7 +285,8 @@ PySource('m5.ext.pyfdt', 'm5/ext/pyfdt/pyfdt.py')
 PySource('m5.ext.pyfdt', 'm5/ext/pyfdt/__init__.py')
 
 PySource('m5.ext.pystats', 'm5/ext/pystats/__init__.py')
-PySource('m5.ext.pystats', 'm5/ext/pystats/jsonserializable.py')
+PySource('m5.ext.pystats', 'm5/ext/pystats/serializable_stat.py')
+PySource('m5.ext.pystats', 'm5/ext/pystats/abstract_stat.py')
 PySource('m5.ext.pystats', 'm5/ext/pystats/group.py')
 PySource('m5.ext.pystats', 'm5/ext/pystats/simstat.py')
 PySource('m5.ext.pystats', 'm5/ext/pystats/statistic.py')
