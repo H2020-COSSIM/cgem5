@@ -123,11 +123,11 @@ args = parser.parse_args()
 
 # Memory: Dual Channel DDR4 2400 DRAM device.
 
-memory = DualChannelDDR4_2400(size="3GB")
+memory = DualChannelDDR4_2400(size=args.mem_size)
 
 # Here we setup the processor. We use a simple processor.
 processor = SimpleProcessor(
-    cpu_type=CPUTypes.TIMING, isa=ISA.RISCV, num_cores=2
+    cpu_type=CPUTypes.TIMING, isa=ISA.RISCV, num_cores=args.num_cores
 )
 
 # Here we setup the board. The RiscvBoard allows for Full-System RISCV
